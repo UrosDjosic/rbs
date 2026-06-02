@@ -1,0 +1,14 @@
+# zadatak / lokalno — ne pushuj
+Oblak copy.pdf
+Oblak copy.txt
+
+storage/
+*.db
+*.db-shm
+*.db-wal
+.env
+.DS_Store
+bin/
+dist/
+*.exe
+

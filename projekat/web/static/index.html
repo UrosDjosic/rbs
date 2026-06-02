@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="sr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Oblak</title>
+    <style>
+      body { font-family: system-ui, Arial, sans-serif; margin: 24px; max-width: 900px; }
+      code { background: #f3f3f3; padding: 2px 4px; border-radius: 4px; }
+      .box { border: 1px solid #ddd; padding: 16px; border-radius: 8px; margin: 16px 0; }
+      button { padding: 8px 12px; }
+      .ok { color: #0a7; }
+      .bad { color: #c00; }
+      input[type="file"] { display: block; margin-top: 8px; }
+      small { color: #666; }
+    </style>
+  </head>
+  <body>
+    <h2>Oblak</h2>
+    <p>Ovaj UI je samo “placeholder” za demo.</p>
+
+    <div class="box">
+      <h3>Health</h3>
+      <button id="btn-health">Proveri /health</button>
+      <div id="health-out"></div>
+    </div>
+
+    <div class="box">
+      <h3>Upload ZIP (Functions)</h3>
+      <small>Ovo koristi isti endpoint kao CLI: <code>POST /functions</code>. Potreban je Bearer token (iz CLI login-a).</small>
+      <div style="margin-top: 8px;">
+        <label>Token (Bearer):</label><br />
+        <input id="token" type="password" style="width: 100%;" placeholder="paste token ovde" />
+      </div>
+      <div style="margin-top: 8px;">
+        <label>Naziv (opciono):</label><br />
+        <input id="fname" type="text" style="width: 100%;" placeholder="npr. hello_world" />
+      </div>
+      <div style="margin-top: 8px;">
+        <input id="zip" type="file" accept=".zip" />
+      </div>
+      <div style="margin-top: 8px;">
+        <button id="btn-upload">Upload na /functions</button>
+      </div>
+      <div id="zip-out" style="margin-top: 8px;"></div>
+    </div>
+
+    <div class="box">
+      <h3>CLI primer</h3>
+      <p>Login i status:</p>
+      <pre><code>go run ./cmd/cli login --url http://127.0.0.1:8080 --user admin --pass admin
+go run ./cmd/cli status --url http://127.0.0.1:8080</code></pre>
+    </div>
+
+    <script>
+      const btn = document.getElementById('btn-health');
+      const out = document.getElementById('health-out');
+      btn.addEventListener('click', async () => {
+        out.textContent = '...';
+        try {
+          const res = await fetch('/health');
+          const j = await res.json();
+          out.innerHTML = `<div class="${res.ok ? 'ok' : 'bad'}">HTTP ${res.status}</div><pre>${JSON.stringify(j, null, 2)}</pre>`;
+        } catch (e) {
+          out.innerHTML = `<div class="bad">${String(e)}</div>`;
+        }
+      });
+
+      const zip = document.getElementById('zip');
+      const zipOut = document.getElementById('zip-out');
+      const token = document.getElementById('token');
+      const fname = document.getElementById('fname');
+      const btnUpload = document.getElementById('btn-upload');
+      zip.addEventListener('change', () => {
+        const f = zip.files && zip.files[0];
+        if (!f) {
+          zipOut.textContent = '';
+          return;
+        }
+        zipOut.textContent = `Izabran fajl: ${f.name} (${f.size} bytes)`;
+      });
+
+      btnUpload.addEventListener('click', async () => {
+        const f = zip.files && zip.files[0];
+        if (!f) {
+          zipOut.innerHTML = '<div class="bad">Izaberi .zip fajl.</div>';
+          return;
+        }
+        if (!token.value) {
+          zipOut.innerHTML = '<div class="bad">Nalepi token (Bearer) iz CLI login-a.</div>';
+          return;
+        }
+        zipOut.textContent = 'Uploading...';
+        try {
+          const fd = new FormData();
+          fd.append('zip', f, f.name);
+          if (fname.value) fd.append('name', fname.value);
+          const res = await fetch('/functions', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + token.value },
+            body: fd
+          });
+          const txt = await res.text();
+          zipOut.innerHTML = `<div class="${res.ok ? 'ok' : 'bad'}">HTTP ${res.status}</div><pre>${txt}</pre>`;
+        } catch (e) {
+          zipOut.innerHTML = `<div class="bad">${String(e)}</div>`;
+        }
+      });
+    </script>
+  </body>
+</html>
+
