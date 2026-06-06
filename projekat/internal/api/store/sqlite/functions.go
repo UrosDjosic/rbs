@@ -38,6 +38,13 @@ VALUES (?, ?, ?, ?, ?, ?)
 	return err
 }
 
+func (d *DB) UpdateFunctionVersionStatus(ctx context.Context, versionID, status string) error {
+	_, err := d.SQL.ExecContext(ctx, `
+UPDATE function_versions SET status = ? WHERE id = ?
+`, status, versionID)
+	return err
+}
+
 type FunctionRow struct {
 	FunctionID string  `json:"function_id"`
 	VersionID  string  `json:"version_id"`

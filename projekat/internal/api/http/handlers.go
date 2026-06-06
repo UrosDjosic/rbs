@@ -18,6 +18,7 @@ import (
 	"oblak/internal/api/store/sqlite"
 	"oblak/internal/common/httpx"
 	"oblak/internal/common/ids"
+	"oblak/internal/verifier"
 )
 
 type Server struct {
@@ -239,12 +240,26 @@ func (s *Server) handleFunctions(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		httpx.WriteJSON(w, http.StatusOK, map[string]any{
+		workDir := filepath.Join("storage", "functions", fnID, verID, "work")
+		vr, err := verifier.Verify(dstPath, workDir, nil)
+		if err != nil {
+			httpx.WriteError(w, http.StatusInternalServerError, "verification failed")
+			return
+		}
+		if err := s.DB.UpdateFunctionVersionStatus(r.Context(), verID, vr.Status); err != nil {
+			httpx.WriteError(w, http.StatusInternalServerError, "status update failed")
+			return
+		}
+
+		resp := map[string]any{
 			"function_id": fnID,
 			"version_id":  verID,
-			"status":      "uploaded",
+			"status":      vr.Status,
 			"sha256":      sha,
-		})
+			"verified":    vr.OK,
+			"layers":      vr.Layers,
+		}
+		httpx.WriteJSON(w, http.StatusOK, resp)
 		return
 
 	default:

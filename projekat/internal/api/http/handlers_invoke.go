@@ -48,6 +48,10 @@ func (s *Server) handleFunctionDeploy(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, http.StatusNotFound, "no versions for function")
 		return
 	}
+	if ver.Status != "verified" {
+		httpx.WriteError(w, http.StatusBadRequest, "function not verified (status: "+ver.Status+")")
+		return
+	}
 
 	now := time.Now()
 	if err := s.DB.DeployFunction(r.Context(), fnID, ver.ID, now); err != nil {

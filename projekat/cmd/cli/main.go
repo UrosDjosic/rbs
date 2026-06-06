@@ -445,7 +445,7 @@ func invokeCmd(args []string) {
 		}
 	}
 
-	// invoke je javan endpoint (bez tokena) — kao curl klijent na slici
+	// invoke is public endpoint (w/o tokens)
 	resp, err := http.Post(strings.TrimRight(base, "/")+"/invoke/"+fnID, "application/json", nil)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "request failed:", err)
