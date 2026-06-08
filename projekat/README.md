@@ -1,75 +1,94 @@
-## Oblak
+## Projekat iz razvoja bezbednosti softvera - Oblak
 
-Platforma za upload i pozivanje korisničkog Python koda (serverless, Firecracker u planu).
+Minimalni “platform skeleton” za serverless Python funkcije.
 
-### Pokretanje API
+- **API** (Go): health, login, auth, upload funkcija, verifier, publish, invoke (stub)
+- **CLI** (Go): `login`, `deploy`, `publish`, `list`, `invoke`
+- **Verifier**: strukturni AV + ClamAV (opciono) + Bandit
+
+### Preduslovi na serveru
+
+**Bandit** (obavezno):
+
+```powershell
+pip install bandit
+python -m bandit --version
+```
+
+**ClamAV** (opciono — ako nije dostupan, sloj se preskače):
+
+Virus baze idu u `storage/clamav/database` (projekat, ne sistemski folder).
+
+**Windows** — instaliraj **x64** (ne ARM64) sa [clamav.net/downloads](https://www.clamav.net/downloads):
+
+```powershell
+.\scripts\setup-clamav.ps1
+```
+
+**Linux** — instaliraj paket, pa skripta:
+
+```bash
+sudo apt install clamav clamav-freshclam   # Debian/Ubuntu
+chmod +x scripts/setup-clamav.sh
+./scripts/setup-clamav.sh
+```
+
+Provera: `clamscan --version` (baze: `storage/clamav/database`)
+
+### Pokretanje
 
 ```powershell
 go run ./cmd/api
 ```
 
-- Health: `http://127.0.0.1:8080/health`
-- GUI: `http://127.0.0.1:8080/ui/`
-
-Podrazumevani korisnik: `admin` / `admin`
-
-### CLI — ceo tok
+Drugi terminal:
 
 ```powershell
-# 1) Login
-go run ./cmd/cli login --url http://127.0.0.1:8080 --user admin --pass admin
-
-# 2) Upload funkcije (ZIP foldera)
+go run ./cmd/cli login --user admin --pass admin
 go run ./cmd/cli deploy --path .\samples\benign\hello_world --name hello_world
-
-# 3) Publish — dobijaš invoke_url
 go run ./cmd/cli publish <function_id>
-
-# 4) Lista funkcija (vidi invoke_url ako je publish-ovano)
-go run ./cmd/cli list
-
-# 5) Invoke (stub — samo upisuje run u bazu, ne izvršava Python)
 go run ./cmd/cli invoke <function_id>
 ```
 
-### cURL (invoke — bez tokena)
+### Verifier pipeline
 
-Posle `publish`, pozovi `invoke_url`:
+Posle uploada API automatski pokreće:
+
+1. **structural_av** — unpack + policy (ekstenzije, path traversal, magic bytes)
+2. **clamav** — `clamscan -r workdir` (ako nije instaliran → preskočeno)
+3. **static_bandit** — Bandit JSON sken (`LOW+` severity → reject)
+
+Status verzije: `verified` ili `rejected`. `publish` dozvoljen samo za `verified`.
+
+Ručno testiranje:
 
 ```powershell
-curl -X POST http://127.0.0.1:8080/invoke/<function_id>
+go run ./cmd/verifier --zip storage\functions\<fn>\<ver>\src.zip
+go run ./cmd/verifier --zip path\to\src.zip --skip-bandit
 ```
 
-Očekivani odgovor (stub):
+### Test primeri
 
-```json
-{
-  "run_id": "...",
-  "function_id": "...",
-  "status": "done",
-  "message": "stub: Python execution not implemented yet (run recorded only)"
-}
-```
+| Sample | Rezultat |
+|---|---|
+| `samples/benign/hello_world` | verified |
+| `samples/malicious/subprocess_shell` | rejected (Bandit) |
+| `samples/malicious/eval_exec` | rejected (Bandit) |
+| `samples/malicious/missing_main` | rejected (structural) |
+| `samples/malicious/forbidden_script` | rejected (structural) |
+| `samples/malicious/nested_main` | rejected (structural) |
 
 ### Endpoints
 
-| Metoda | Putanja | Auth | Opis |
-|--------|---------|------|------|
-| GET | `/health` | ne | health check |
-| POST | `/auth/login` | ne | token |
-| GET | `/me` | Bearer | trenutni korisnik |
-| POST | `/functions` | Bearer | upload ZIP |
-| GET | `/functions` | Bearer | lista |
-| POST | `/functions/{id}/deploy` | Bearer | publish → `invoke_url` |
-| POST | `/invoke/{function_id}` | ne | stub invoke |
+- `GET /health`
+- `GET /ui`
+- `POST /auth/login`
+- `GET /me`
+- `POST /functions` — upload + verify
+- `POST /functions/{id}/deploy` — publish (samo verified)
+- `POST /invoke/{function_id}`
 
-### Storage
+### Podrazumevani korisnik
 
-- Baza: `storage/oblak.db`
-- ZIP: `storage/functions/<function_id>/<version_id>/src.zip`
-- Runovi: tabela `runs`
-
-### Stubovi (još ne rade)
-
-- `cmd/verifier` — analiza koda
-- `cmd/runner` — Firecracker izvršavanje
+- user: `admin`
+- pass: `admin`
