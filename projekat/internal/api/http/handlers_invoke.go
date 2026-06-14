@@ -1,12 +1,15 @@
 package httpapi
 
 import (
+	"fmt"
 	"net/http"
+	"path/filepath"
 	"time"
 
 	"oblak/internal/api/store/sqlite"
 	"oblak/internal/common/httpx"
 	"oblak/internal/common/ids"
+	"oblak/internal/runner"
 )
 
 func (s *Server) handleFunctionDeploy(w http.ResponseWriter, r *http.Request) {
@@ -94,26 +97,70 @@ func (s *Server) handleInvoke(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, http.StatusInternalServerError, "id generation failed")
 		return
 	}
+
+	// Prepare work directory path
+	workDir := filepath.Join("storage", "functions", fnID, dep.ActiveVersionID, "work")
+
+	// Invoke the function using the configured runner
+	ctx := r.Context()
+	result, err := s.Runner.Invoke(ctx, runner.InvokeRequest{
+		FunctionID: fnID,
+		VersionID:  dep.ActiveVersionID,
+		WorkDir:    workDir,
+		Payload:    nil, // TODO: Read from request body if needed
+	})
+
 	now := time.Now()
-	msg := "stub: Python execution not implemented yet (run recorded only)"
+	status := "done"
+	var message *string
+
+	if err != nil {
+		status = "error"
+		errMsg := "execution failed: " + err.Error()
+		message = &errMsg
+		result = &runner.InvokeResult{
+			ExitCode: 1,
+			Error:    err.Error(),
+			Stderr:   err.Error(),
+		}
+	} else if result == nil {
+		status = "error"
+		errMsg := "execution failed: runner returned no result"
+		message = &errMsg
+		result = &runner.InvokeResult{
+			ExitCode: 1,
+			Error:    errMsg,
+			Stderr:   errMsg,
+		}
+	} else if result.ExitCode != 0 {
+		status = "error"
+		errMsg := fmt.Sprintf("function exited with code: %d", result.ExitCode)
+		message = &errMsg
+	}
+
+	// Record the run in the database
 	if err := s.DB.InsertRun(r.Context(), sqlite.Run{
 		ID:         runID,
 		FunctionID: fnID,
 		VersionID:  dep.ActiveVersionID,
-		Status:     "done",
+		Status:     status,
 		CreatedAt:  now,
 		FinishedAt: &now,
-		Message:    &msg,
+		Message:    message,
 	}); err != nil {
 		httpx.WriteError(w, http.StatusInternalServerError, "run insert failed")
 		return
 	}
 
+	// Return result to client
 	httpx.WriteJSON(w, http.StatusOK, map[string]any{
 		"run_id":      runID,
 		"function_id": fnID,
 		"version_id":  dep.ActiveVersionID,
-		"status":      "done",
-		"message":     msg,
+		"status":      status,
+		"exit_code":   result.ExitCode,
+		"stdout":      result.Stdout,
+		"stderr":      result.Stderr,
+		"message":     message,
 	})
 }

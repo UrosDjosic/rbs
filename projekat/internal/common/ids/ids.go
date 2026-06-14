@@ -5,6 +5,11 @@ import (
 	"encoding/base64"
 )
 
+// NewID returns a URL-safe random identifier.
+func NewID() (string, error) {
+	return NewToken(16)
+}
+
 // NewToken returns a URL-safe random token.
 func NewToken(nbytes int) (string, error) {
 	b := make([]byte, nbytes)

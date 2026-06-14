@@ -18,12 +18,14 @@ import (
 	"oblak/internal/api/store/sqlite"
 	"oblak/internal/common/httpx"
 	"oblak/internal/common/ids"
+	"oblak/internal/runner"
 	"oblak/internal/verifier"
 )
 
 type Server struct {
 	DB            *sqlite.DB
 	PublicBaseURL string // npr. http://127.0.0.1:8080 — za invoke_url u odgovorima
+	Runner        runner.Runner // Execution backend (local, firecracker, etc.)
 }
 
 func (s *Server) invokeURL(functionID string) string {
@@ -44,6 +46,7 @@ func (s *Server) Register(mux *http.ServeMux, uiFS http.Handler) {
 	mux.Handle("/ui/", http.StripPrefix("/ui/", uiFS))
 
 	mux.Handle("/auth/login", AuditMiddleware(s.DB, "login", http.HandlerFunc(s.handleLogin)))
+	mux.Handle("/auth/register", AuditMiddleware(s.DB, "register", http.HandlerFunc(s.handleRegister)))
 	mux.Handle("/me", AuditMiddleware(s.DB, "me", AuthMiddleware(s.DB, http.HandlerFunc(s.handleMe))))
 	mux.Handle("/functions", AuditMiddleware(s.DB, "functions", AuthMiddleware(s.DB, http.HandlerFunc(s.handleFunctions))))
 	mux.Handle("POST /functions/{id}/deploy", AuditMiddleware(s.DB, "function_deploy", AuthMiddleware(s.DB, http.HandlerFunc(s.handleFunctionDeploy))))
@@ -106,6 +109,77 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	tt := sqlite.Token{
 		Token:     tok,
 		UserID:    u.ID,
+		CreatedAt: now,
+		ExpiresAt: now.Add(24 * time.Hour),
+	}
+	if err := s.DB.InsertToken(r.Context(), tt); err != nil {
+		httpx.WriteError(w, http.StatusInternalServerError, "token insert failed")
+		return
+	}
+
+	httpx.WriteJSON(w, http.StatusOK, loginResp{Token: tok})
+}
+
+func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		httpx.WriteError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	var req loginReq
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httpx.WriteError(w, http.StatusBadRequest, "invalid json")
+		return
+	}
+	if req.Username == "" || req.Password == "" {
+		httpx.WriteError(w, http.StatusBadRequest, "username and password required")
+		return
+	}
+
+	// Check if user already exists
+	existing, err := s.DB.GetUserByUsername(r.Context(), req.Username)
+	if err != nil {
+		httpx.WriteError(w, http.StatusInternalServerError, "user lookup failed")
+		return
+	}
+	if existing != nil {
+		httpx.WriteError(w, http.StatusConflict, "username already taken")
+		return
+	}
+
+	// Hash password
+	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		httpx.WriteError(w, http.StatusInternalServerError, "password hashing failed")
+		return
+	}
+
+	// Create user
+	uid, err := ids.NewID()
+	if err != nil {
+		httpx.WriteError(w, http.StatusInternalServerError, "id generation failed")
+		return
+	}
+	u := sqlite.User{
+		ID:           uid,
+		Username:     req.Username,
+		PasswordHash: hash,
+		CreatedAt:    time.Now(),
+	}
+	if err := s.DB.InsertUser(r.Context(), u); err != nil {
+		httpx.WriteError(w, http.StatusInternalServerError, "user creation failed")
+		return
+	}
+
+	// Generate token
+	tok, err := ids.NewToken(32)
+	if err != nil {
+		httpx.WriteError(w, http.StatusInternalServerError, "token generation failed")
+		return
+	}
+	now := time.Now()
+	tt := sqlite.Token{
+		Token:     tok,
+		UserID:    uid,
 		CreatedAt: now,
 		ExpiresAt: now.Add(24 * time.Hour),
 	}

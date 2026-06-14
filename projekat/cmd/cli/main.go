@@ -26,6 +26,8 @@ func main() {
 	switch cmd {
 	case "login":
 		loginCmd(os.Args[2:])
+	case "register":
+		registerCmd(os.Args[2:])
 	case "status":
 		statusCmd(os.Args[2:])
 	case "deploy":
@@ -59,14 +61,16 @@ Pokretanje (posle build-a):
   .\oblak.exe <komanda> [opcije]
 
 Tipičan redosled:
-  1. login     → sačuva token
-  2. deploy    → upload ZIP (folder sa main.py)
-  3. publish   → dobijaš invoke_url
-  4. invoke    → poziv funkcije (stub)
+  1. register  → kreiraj nalog
+  2. login     → sačuva token
+  3. deploy    → upload ZIP (folder sa main.py)
+  4. publish   → dobijaš invoke_url
+  5. invoke    → poziv funkcije (stub)
   list         → pregled funkcija
 
 Komande:
   help              prikaži ovu pomoć (ili: help <komanda>)
+  register          registracija novog naloga
   login             prijava na API
   status            provera tokena (/me)
   deploy            upload funkcije (folder → zip)
@@ -75,7 +79,8 @@ Komande:
   invoke <id>       pozovi /invoke/<id> (bez tokena)
 
 Primeri:
-  go run ./cmd/cli login --user admin --pass admin
+  go run ./cmd/cli register --user john --pass mypass
+  go run ./cmd/cli login --user john --pass mypass
   go run ./cmd/cli deploy --path .\samples\benign\hello_world --name hello_world
   go run ./cmd/cli publish AEqPCIngsHs-9TG1gfjplw
   go run ./cmd/cli invoke AEqPCIngsHs-9TG1gfjplw
@@ -98,6 +103,17 @@ login — prijava i čuvanje tokena lokalno
   go run ./cmd/cli login [--url http://127.0.0.1:8080] --user USER --pass PASS
 
 Podrazumevano: admin / admin (kreira se pri prvom startu API-ja).
+`))
+	case "register":
+		fmt.Println(strings.TrimSpace(`
+register — registracija novog naloga
+
+  go run ./cmd/cli register [--url http://127.0.0.1:8080] --user USER --pass PASS
+
+Kreira novi nalog i automatski sačuva token lokalno.
+Primeri:
+  go run ./cmd/cli register --user john --pass mypass
+  go run ./cmd/cli register --url http://api.example.com --user alice --pass secure123
 `))
 	case "status":
 		fmt.Println("status — GET /me sa sačuvanim tokenom\n\n  go run ./cmd/cli status [--url http://127.0.0.1:8080]")
@@ -219,6 +235,55 @@ func loginCmd(args []string) {
 		os.Exit(1)
 	}
 	fmt.Println("ok: token saved")
+}
+
+func registerCmd(args []string) {
+	fs := flag.NewFlagSet("register", flag.ExitOnError)
+	url := fs.String("url", "http://127.0.0.1:8080", "API base URL")
+	user := fs.String("user", "", "username")
+	pass := fs.String("pass", "", "password")
+	_ = fs.Parse(args)
+
+	if *user == "" || *pass == "" {
+		fmt.Fprintln(os.Stderr, "user/pass required")
+		os.Exit(2)
+	}
+
+	body, _ := json.Marshal(map[string]string{
+		"username": *user,
+		"password": *pass,
+	})
+	resp, err := http.Post(strings.TrimRight(*url, "/")+"/auth/register", "application/json", bytes.NewReader(body))
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "request failed:", err)
+		os.Exit(1)
+	}
+	defer resp.Body.Close()
+	b, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != 200 {
+		fmt.Fprintf(os.Stderr, "register failed: HTTP %d: %s\n", resp.StatusCode, string(b))
+		os.Exit(1)
+	}
+	var out struct {
+		Token string `json:"token"`
+	}
+	if err := json.Unmarshal(b, &out); err != nil || out.Token == "" {
+		fmt.Fprintln(os.Stderr, "bad response:", string(b))
+		os.Exit(1)
+	}
+
+	cfg, err := config.Load()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "config load failed:", err)
+		os.Exit(1)
+	}
+	cfg.BaseURL = *url
+	cfg.Token = out.Token
+	if err := config.Save(cfg); err != nil {
+		fmt.Fprintln(os.Stderr, "config save failed:", err)
+		os.Exit(1)
+	}
+	fmt.Println("ok: account created and token saved")
 }
 
 func statusCmd(args []string) {
