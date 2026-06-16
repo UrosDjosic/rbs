@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -14,6 +15,9 @@ import (
 	httpapi "oblak/internal/api/http"
 	"oblak/internal/api/store/sqlite"
 	"oblak/internal/common/ids"
+	"oblak/internal/runner"
+	"oblak/internal/runner/firecracker"
+	"oblak/internal/runner/local"
 )
 
 func main() {
@@ -48,7 +52,14 @@ func main() {
 	mux := nethttp.NewServeMux()
 	ui := nethttp.FileServer(nethttp.Dir(filepath.Join("web", "static")))
 	publicURL := env("OBLAK_PUBLIC_URL", "http://"+addr)
-	api := httpapi.Server{DB: db, PublicBaseURL: publicURL}
+
+	// Initialize the execution runner
+	// Default to local runner for development
+	// Can be switched to Firecracker if FIRECRACKER_* env vars are set
+	runnerInstance := initRunner()
+	defer runnerInstance.Close()
+
+	api := httpapi.Server{DB: db, PublicBaseURL: publicURL, Runner: runnerInstance}
 	api.Register(mux, ui)
 
 	srv := &nethttp.Server{
@@ -92,4 +103,61 @@ func env(k, def string) string {
 		return v
 	}
 	return def
+}
+
+func initRunner() runner.Runner {
+	// Check for Firecracker configuration
+	fcKernel := os.Getenv("FIRECRACKER_KERNEL")
+	fcRootfs := os.Getenv("FIRECRACKER_ROOTFS")
+
+	if fcKernel != "" && fcRootfs != "" {
+		// Try to use Firecracker runner
+		log.Printf("Attempting to initialize Firecracker runner...")
+		log.Printf("  Kernel: %s", fcKernel)
+		log.Printf("  Rootfs: %s", fcRootfs)
+
+		// Import firecracker runner only if needed
+		// This avoids hard dependency on firecracker package
+		fcRunner, err := initFirecrackerRunner(fcKernel, fcRootfs)
+		if err != nil {
+			log.Printf("Warning: Failed to initialize Firecracker runner: %v", err)
+			log.Printf("Falling back to local runner")
+			return local.NewLocalRunner("")
+		}
+		return fcRunner
+	}
+
+	// Default to local runner
+	log.Printf("Using local runner (subprocess execution)")
+	return local.NewLocalRunner("")
+}
+
+func initFirecrackerRunner(kernelPath, rootfsPath string) (runner.Runner, error) {
+	// Verify kernel and rootfs exist
+	if _, err := os.Stat(kernelPath); err != nil {
+		return nil, fmt.Errorf("kernel not found: %w", err)
+	}
+	if _, err := os.Stat(rootfsPath); err != nil {
+		return nil, fmt.Errorf("rootfs not found: %w", err)
+	}
+
+	// Firecracker uses Unix sockets, which are not supported on WSL's /mnt/c
+	// DrvFS mount. Keep VM scratch state on a Linux filesystem by default.
+	runsDir := env("OBLAK_RUNS_DIR", filepath.Join(os.TempDir(), "oblak-runs"))
+	if err := os.MkdirAll(runsDir, 0o755); err != nil {
+		return nil, fmt.Errorf("failed to create runs directory: %w", err)
+	}
+
+	// Initialize Firecracker runner
+	fcRunner, err := firecracker.NewFirecrackerRunner(kernelPath, rootfsPath, runsDir)
+	if err != nil {
+		return nil, fmt.Errorf("firecracker initialization failed: %w", err)
+	}
+
+	log.Printf("Firecracker runner initialized successfully")
+	log.Printf("  Kernel: %s", kernelPath)
+	log.Printf("  Rootfs: %s", rootfsPath)
+	log.Printf("  Runs:   %s", runsDir)
+
+	return fcRunner, nil
 }
