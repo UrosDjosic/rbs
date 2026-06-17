@@ -38,6 +38,8 @@ func main() {
 		publishCmd(os.Args[2:])
 	case "invoke":
 		invokeCmd(os.Args[2:])
+	case "run":
+		runCmd(os.Args[2:])
 	case "help":
 		helpCmd(os.Args[2:])
 	case "-h", "--help":
@@ -76,7 +78,8 @@ Komande:
   deploy            upload funkcije (folder → zip)
   publish <id>      objavi funkciju → invoke_url
   list              lista uploadovanih funkcija
-  invoke <id>       pozovi /invoke/<id> (bez tokena)
+  invoke <id>       pozovi /invoke/<id> (opciono --data JSON)
+  run <run_id>      pregled sačuvanog izvršavanja
 
 Primeri:
   go run ./cmd/cli register --user john --pass mypass
@@ -137,12 +140,22 @@ function_id dobijaš iz output-a komande deploy ili iz list.
 		fmt.Println("list — GET /functions (zaštićeno tokenom)\n\n  go run ./cmd/cli list [--url ...]")
 	case "invoke":
 		fmt.Println(strings.TrimSpace(`
-invoke — POST /invoke/<function_id> (javni endpoint, stub)
+invoke — POST /invoke/<function_id> (javni endpoint)
 
-  go run ./cmd/cli invoke <function_id> [--url ...]
+  go run ./cmd/cli invoke <function_id> [--data '{"a":2,"b":2}'] [--url ...]
 
-Samo ID, npr. AEqPCIngsHs-9TG1gfjplw — NE kopiraj "function_id":"..." iz JSON-a.
+--data šalje JSON telo zahteva; funkcija ga čita sa stdin.
+Koristi --data @file.json ako shell pojede navodnike.
 Pre invoke mora publish (status deployed).
+`))
+	case "run":
+		fmt.Println(strings.TrimSpace(`
+run — GET /runs/<run_id> (zaštićeno tokenom)
+
+  go run ./cmd/cli run <run_id> [--url ...]
+
+Kratki pregled statusa, exit code-a i stdout/stderr iz baze.
+run_id dobijaš iz output-a komande invoke.
 `))
 	default:
 		fmt.Fprintf(os.Stderr, "nepoznata komanda za help: %q\n\n", args[0])
@@ -403,8 +416,11 @@ func zipDir(dir string) ([]byte, error) {
 			return err
 		}
 		rel = filepath.ToSlash(rel)
-		// skip common junk
+		// skip common junk and local invoke fixtures (not part of deployable function)
 		if strings.HasPrefix(rel, ".git/") || strings.HasPrefix(rel, "storage/") {
+			return nil
+		}
+		if rel == "payload.json" {
 			return nil
 		}
 		info, err := d.Info()
@@ -490,19 +506,15 @@ func publishCmd(args []string) {
 }
 
 func invokeCmd(args []string) {
-	fs := flag.NewFlagSet("invoke", flag.ExitOnError)
-	url := fs.String("url", "", "API base URL (optional)")
-	_ = fs.Parse(args)
-
-	if len(fs.Args()) < 1 {
-		fmt.Fprintln(os.Stderr, "usage: oblak invoke <function_id>")
+	fnID, baseURL, payload, err := parseInvokeArgs(args)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(2)
 	}
-	fnID := fs.Args()[0]
 
 	base := "http://127.0.0.1:8080"
-	if *url != "" {
-		base = *url
+	if baseURL != "" {
+		base = baseURL
 	} else {
 		cfg, err := config.Load()
 		if err == nil && cfg.BaseURL != "" {
@@ -510,8 +522,11 @@ func invokeCmd(args []string) {
 		}
 	}
 
-	// invoke is public endpoint (w/o tokens)
-	resp, err := http.Post(strings.TrimRight(base, "/")+"/invoke/"+fnID, "application/json", nil)
+	var body io.Reader
+	if payload != "" {
+		body = strings.NewReader(payload)
+	}
+	resp, err := http.Post(strings.TrimRight(base, "/")+"/invoke/"+fnID, "application/json", body)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "request failed:", err)
 		os.Exit(1)
@@ -523,4 +538,114 @@ func invokeCmd(args []string) {
 		os.Exit(1)
 	}
 	fmt.Println(string(b))
+}
+
+func parseInvokeArgs(args []string) (fnID, baseURL, payload string, err error) {
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "--url":
+			if i+1 >= len(args) {
+				return "", "", "", fmt.Errorf("usage: oblak invoke <function_id> [--data JSON] [--url ...]")
+			}
+			baseURL = args[i+1]
+			i++
+		case "--data":
+			if i+1 >= len(args) {
+				return "", "", "", fmt.Errorf("usage: oblak invoke <function_id> [--data JSON] [--url ...]")
+			}
+			payload = args[i+1]
+			if strings.HasPrefix(payload, "@") {
+				b, readErr := os.ReadFile(strings.TrimPrefix(payload, "@"))
+				if readErr != nil {
+					return "", "", "", fmt.Errorf("read data file: %w", readErr)
+				}
+				payload = string(b)
+			}
+			i++
+		case "-h", "--help":
+			return "", "", "", fmt.Errorf("usage: oblak invoke <function_id> [--data JSON] [--url ...]")
+		default:
+			if strings.HasPrefix(args[i], "-") {
+				return "", "", "", fmt.Errorf("unknown flag: %s", args[i])
+			}
+			if fnID != "" {
+				return "", "", "", fmt.Errorf("usage: oblak invoke <function_id> [--data JSON] [--url ...]")
+			}
+			fnID = args[i]
+		}
+	}
+	if fnID == "" {
+		return "", "", "", fmt.Errorf("usage: oblak invoke <function_id> [--data JSON] [--url ...]")
+	}
+	return fnID, baseURL, payload, nil
+}
+
+func runCmd(args []string) {
+	fs := flag.NewFlagSet("run", flag.ExitOnError)
+	url := fs.String("url", "", "API base URL (optional)")
+	_ = fs.Parse(args)
+
+	if len(fs.Args()) < 1 {
+		fmt.Fprintln(os.Stderr, "usage: oblak run <run_id>")
+		os.Exit(2)
+	}
+	runID := fs.Args()[0]
+
+	_, base, err := loadConfig(*url)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+
+	b, code, err := authedRequest("GET", base, "/runs/"+runID, nil, "")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "request failed:", err)
+		os.Exit(1)
+	}
+	if code != 200 {
+		fmt.Fprintf(os.Stderr, "run lookup failed: HTTP %d: %s\n", code, string(b))
+		os.Exit(1)
+	}
+
+	var out struct {
+		RunID           string  `json:"run_id"`
+		FunctionID      string  `json:"function_id"`
+		VersionID       string  `json:"version_id"`
+		Status          string  `json:"status"`
+		ExitCode        *int    `json:"exit_code"`
+		Stdout          string  `json:"stdout"`
+		Stderr          string  `json:"stderr"`
+		StdoutTruncated bool    `json:"stdout_truncated"`
+		StderrTruncated bool    `json:"stderr_truncated"`
+		Message         *string `json:"message"`
+	}
+	if err := json.Unmarshal(b, &out); err != nil {
+		fmt.Fprintln(os.Stderr, "bad response:", string(b))
+		os.Exit(1)
+	}
+
+	exit := "?"
+	if out.ExitCode != nil {
+		exit = fmt.Sprintf("%d", *out.ExitCode)
+	}
+	fmt.Printf("run_id:     %s\n", out.RunID)
+	fmt.Printf("function:   %s\n", out.FunctionID)
+	fmt.Printf("version:    %s\n", out.VersionID)
+	fmt.Printf("status:     %s (exit %s)\n", out.Status, exit)
+	if out.Message != nil && *out.Message != "" {
+		fmt.Printf("message:    %s\n", *out.Message)
+	}
+	fmt.Printf("stdout:     %s\n", displayStream(out.Stdout, out.StdoutTruncated))
+	fmt.Printf("stderr:     %s\n", displayStream(out.Stderr, out.StderrTruncated))
+}
+
+func displayStream(s string, truncated bool) string {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return "(prazno)"
+	}
+	if truncated {
+		return s + " [skraćeno]"
+	}
+	return s
 }
