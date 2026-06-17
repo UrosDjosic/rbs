@@ -57,6 +57,22 @@ func Verify(zipPath, workDir string, opts *Options) (*Result, error) {
 		return result, nil
 	}
 
+	requirements := scanRequirementsPolicy(workDir)
+	result.Layers = append(result.Layers, requirements)
+	if !requirements.OK && !requirements.Skipped {
+		result.OK = false
+		result.Status = StatusRejected
+		return result, nil
+	}
+
+	pipAudit := scanPipAudit(workDir, o)
+	result.Layers = append(result.Layers, pipAudit)
+	if !pipAudit.OK && !pipAudit.Skipped {
+		result.OK = false
+		result.Status = StatusRejected
+		return result, nil
+	}
+
 	result.OK = true
 	result.Status = StatusVerified
 	return result, nil
