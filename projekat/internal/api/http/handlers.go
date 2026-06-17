@@ -26,6 +26,10 @@ type Server struct {
 	DB            *sqlite.DB
 	PublicBaseURL string // npr. http://127.0.0.1:8080 — za invoke_url u odgovorima
 	Runner        runner.Runner // Execution backend (local, firecracker, etc.)
+	RunsDir       string        // Firecracker runs/cache root (OBLAK_RUNS_DIR); optional
+	LoginLimiter  *IPRateLimiter
+	InvokeLimiter *IPRateLimiter
+	InvokeSlots   chan struct{} // max concurrent invokes; nil = unlimited
 }
 
 func (s *Server) invokeURL(functionID string) string {
@@ -45,12 +49,15 @@ func (s *Server) Register(mux *http.ServeMux, uiFS http.Handler) {
 	})
 	mux.Handle("/ui/", http.StripPrefix("/ui/", uiFS))
 
-	mux.Handle("/auth/login", AuditMiddleware(s.DB, "login", http.HandlerFunc(s.handleLogin)))
+	mux.Handle("/auth/login", AuditMiddleware(s.DB, "login",
+		RateLimitMiddleware(s.LoginLimiter, "login", http.HandlerFunc(s.handleLogin))))
 	mux.Handle("/auth/register", AuditMiddleware(s.DB, "register", http.HandlerFunc(s.handleRegister)))
 	mux.Handle("/me", AuditMiddleware(s.DB, "me", AuthMiddleware(s.DB, http.HandlerFunc(s.handleMe))))
 	mux.Handle("/functions", AuditMiddleware(s.DB, "functions", AuthMiddleware(s.DB, http.HandlerFunc(s.handleFunctions))))
 	mux.Handle("POST /functions/{id}/deploy", AuditMiddleware(s.DB, "function_deploy", AuthMiddleware(s.DB, http.HandlerFunc(s.handleFunctionDeploy))))
-	mux.Handle("POST /invoke/{function_id}", AuditMiddleware(s.DB, "invoke", http.HandlerFunc(s.handleInvoke)))
+	mux.Handle("POST /invoke/{function_id}", AuditMiddleware(s.DB, "invoke",
+		RateLimitMiddleware(s.InvokeLimiter, "invoke", http.HandlerFunc(s.handleInvoke))))
+	mux.Handle("GET /runs/{run_id}", AuditMiddleware(s.DB, "run_get", AuthMiddleware(s.DB, http.HandlerFunc(s.handleRunGet))))
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
