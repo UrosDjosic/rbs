@@ -30,19 +30,82 @@
               "isTrustBoundary": true,
               "hasOpenThreats": false,
               "crossingFlows": [],
-              "containedElements": []
+              "containedElements": [
+                "6287eab2-6c7d-4e51-ac5c-f06b4959cd81"
+              ]
             },
             "labels": [
               "Internet/Platform Boundary"
             ],
             "id": "aae8811d-9ce9-4a0c-9a15-5c8aa939f577",
             "source": {
-              "x": 556,
-              "y": 207
+              "x": 300,
+              "y": 330
             },
             "target": {
-              "x": 656,
-              "y": 307
+              "x": 940,
+              "y": 70
+            },
+            "vertices": [
+              {
+                "x": 370,
+                "y": 300
+              }
+            ],
+            "tools": {
+              "items": [
+                "boundary",
+                "button-remove",
+                "vertices",
+                "source-arrowhead",
+                "target-arrowhead",
+                "boundary",
+                "button-remove",
+                "vertices",
+                "source-arrowhead",
+                "target-arrowhead",
+                "boundary",
+                "button-remove",
+                "vertices",
+                "source-arrowhead",
+                "target-arrowhead",
+                "boundary",
+                "button-remove",
+                "vertices",
+                "source-arrowhead",
+                "target-arrowhead",
+                "boundary",
+                "button-remove",
+                "vertices",
+                "source-arrowhead",
+                "target-arrowhead",
+                "boundary",
+                "button-remove",
+                "vertices",
+                "source-arrowhead",
+                "target-arrowhead",
+                "boundary",
+                "button-remove",
+                "vertices",
+                "source-arrowhead",
+                "target-arrowhead",
+                "boundary",
+                "button-remove",
+                "vertices",
+                "source-arrowhead",
+                "target-arrowhead",
+                "boundary",
+                "button-remove",
+                "vertices",
+                "source-arrowhead",
+                "target-arrowhead",
+                "boundary",
+                "button-remove",
+                "vertices",
+                "source-arrowhead",
+                "target-arrowhead"
+              ],
+              "name": null
             }
           },
           {
@@ -66,6 +129,7 @@
             },
             "visible": true,
             "shape": "actor",
+            "zIndex": 1,
             "ports": {
               "groups": {
                 "top": {
@@ -149,7 +213,6 @@
               ]
             },
             "id": "30f3f236-1db0-4561-b7c3-b1a42017f69f",
-            "zIndex": 1,
             "data": {
               "type": "tm.Actor",
               "name": "Legitimni Korisnik",
@@ -229,6 +292,7 @@
             },
             "visible": true,
             "shape": "process",
+            "zIndex": 11,
             "ports": {
               "groups": {
                 "top": {
@@ -312,7 +376,6 @@
               ]
             },
             "id": "6287eab2-6c7d-4e51-ac5c-f06b4959cd81",
-            "zIndex": 11,
             "data": {
               "type": "tm.Process",
               "name": "API\nServer",
