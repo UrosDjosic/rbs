@@ -1,0 +1,508 @@
+=== GOLANG (go vet, gosec) ===
+
+PS C:\Code\Projekat\rbs\projekat> $env:PATH += ";C:\Users\urosdjosic\sdk\go1.26.0\bin"
+PS C:\Code\Projekat\rbs\projekat> C:\Users\urosdjosic\go\bin\gosec.exe ./...
+[gosec] 2026/06/18 16:09:55 Including rules: default
+[gosec] 2026/06/18 16:09:55 Excluding rules: default
+[gosec] 2026/06/18 16:09:55 Including analyzers: default
+[gosec] 2026/06/18 16:09:55 Excluding analyzers: default
+[gosec] 2026/06/18 16:09:55 Import directory: C:\Code\Projekat\rbs\projekat\internal\common\ids
+[gosec] 2026/06/18 16:09:55 Import directory: C:\Code\Projekat\rbs\projekat\cmd\cli
+[gosec] 2026/06/18 16:09:55 Import directory: C:\Code\Projekat\rbs\projekat\cmd\runner
+[gosec] 2026/06/18 16:09:55 Import directory: C:\Code\Projekat\rbs\projekat\samples
+[gosec] 2026/06/18 16:09:55 Import directory: C:\Code\Projekat\rbs\projekat\internal\api\http
+[gosec] 2026/06/18 16:09:55 Import directory: C:\Code\Projekat\rbs\projekat\cmd\api
+[gosec] 2026/06/18 16:09:55 Import directory: C:\Code\Projekat\rbs\projekat\internal\runner\local
+[gosec] 2026/06/18 16:09:55 Import directory: C:\Code\Projekat\rbs\projekat\internal\cli\config
+[gosec] 2026/06/18 16:09:55 Import directory: C:\Code\Projekat\rbs\projekat\cmd\verifier
+[gosec] 2026/06/18 16:09:55 Import directory: C:\Code\Projekat\rbs\projekat\internal\runner\firecracker
+[gosec] 2026/06/18 16:09:55 Import directory: C:\Code\Projekat\rbs\projekat\internal\function
+[gosec] 2026/06/18 16:09:55 Import directory: C:\Code\Projekat\rbs\projekat\internal\common\httpx
+[gosec] 2026/06/18 16:09:55 Import directory: C:\Code\Projekat\rbs\projekat\internal\api\store\sqlite
+[gosec] 2026/06/18 16:09:55 Import directory: C:\Code\Projekat\rbs\projekat\internal\verifier
+[gosec] 2026/06/18 16:09:55 Import directory: C:\Code\Projekat\rbs\projekat\internal\runner
+[gosec] 2026/06/18 16:09:58 Checking package: runner
+[gosec] 2026/06/18 16:09:58 Checking file: C:\Code\Projekat\rbs\projekat\internal\runner\types.go
+[gosec] 2026/06/18 16:09:58 Checking package: main
+[gosec] 2026/06/18 16:09:58 Checking file: C:\Code\Projekat\rbs\projekat\cmd\runner\main.go
+[gosec] 2026/06/18 16:09:58 Checking package: local
+[gosec] 2026/06/18 16:09:58 Checking file: C:\Code\Projekat\rbs\projekat\internal\runner\local\runner.go
+[gosec] 2026/06/18 16:09:58 Checking package: ids
+[gosec] 2026/06/18 16:09:58 Checking file: C:\Code\Projekat\rbs\projekat\internal\common\ids\ids.go
+[gosec] 2026/06/18 16:09:58 Checking package: sqlite
+[gosec] 2026/06/18 16:09:58 Checking file: C:\Code\Projekat\rbs\projekat\internal\api\store\sqlite\audit.go
+[gosec] 2026/06/18 16:09:58 Checking file: C:\Code\Projekat\rbs\projekat\internal\api\store\sqlite\db.go
+[gosec] 2026/06/18 16:09:58 Checking file: C:\Code\Projekat\rbs\projekat\internal\api\store\sqlite\functions.go
+[gosec] 2026/06/18 16:09:58 Checking file: C:\Code\Projekat\rbs\projekat\internal\api\store\sqlite\migrate.go
+[gosec] 2026/06/18 16:09:58 Checking file: C:\Code\Projekat\rbs\projekat\internal\api\store\sqlite\runs.go
+[gosec] 2026/06/18 16:09:58 Checking file: C:\Code\Projekat\rbs\projekat\internal\api\store\sqlite\tokens.go
+[gosec] 2026/06/18 16:09:58 Checking file: C:\Code\Projekat\rbs\projekat\internal\api\store\sqlite\users.go
+[gosec] 2026/06/18 16:09:58 Checking package: main
+[gosec] 2026/06/18 16:09:58 Checking file: C:\Code\Projekat\rbs\projekat\cmd\verifier\main.go
+[gosec] 2026/06/18 16:09:58 Checking package: config
+[gosec] 2026/06/18 16:09:58 Checking file: C:\Code\Projekat\rbs\projekat\internal\cli\config\config.go
+[gosec] 2026/06/18 16:09:58 Checking package: verifier
+[gosec] 2026/06/18 16:09:58 Checking file: C:\Code\Projekat\rbs\projekat\internal\verifier\bandit.go
+[gosec] 2026/06/18 16:09:58 Checking file: C:\Code\Projekat\rbs\projekat\internal\verifier\clamav.go
+[gosec] 2026/06/18 16:09:58 Checking file: C:\Code\Projekat\rbs\projekat\internal\verifier\options.go
+[gosec] 2026/06/18 16:09:58 Checking package: function
+[gosec] 2026/06/18 16:09:58 Checking file: C:\Code\Projekat\rbs\projekat\internal\verifier\pip_audit.go
+[gosec] 2026/06/18 16:09:58 Checking file: C:\Code\Projekat\rbs\projekat\internal\function\prepare.go
+[gosec] 2026/06/18 16:09:58 Checking file: C:\Code\Projekat\rbs\projekat\internal\verifier\requirements.go
+[gosec] 2026/06/18 16:09:58 Checking file: C:\Code\Projekat\rbs\projekat\internal\verifier\structural.go
+[gosec] 2026/06/18 16:09:58 Checking file: C:\Code\Projekat\rbs\projekat\internal\verifier\types.go
+[gosec] 2026/06/18 16:09:58 Checking file: C:\Code\Projekat\rbs\projekat\internal\verifier\unzip.go
+[gosec] 2026/06/18 16:09:58 Checking file: C:\Code\Projekat\rbs\projekat\internal\verifier\verify.go
+[gosec] 2026/06/18 16:09:58 Checking package: httpx
+[gosec] 2026/06/18 16:09:58 Checking package: firecracker
+[gosec] 2026/06/18 16:09:58 Checking file: C:\Code\Projekat\rbs\projekat\internal\common\httpx\httpx.go
+[gosec] 2026/06/18 16:09:58 Checking file: C:\Code\Projekat\rbs\projekat\internal\runner\firecracker\client.go
+[gosec] 2026/06/18 16:09:58 Checking file: C:\Code\Projekat\rbs\projekat\internal\runner\firecracker\runner.go
+[gosec] 2026/06/18 16:09:58 Checking package: main
+[gosec] 2026/06/18 16:09:58 Checking file: C:\Code\Projekat\rbs\projekat\cmd\cli\main.go
+[gosec] 2026/06/18 16:09:58 Checking package: main
+[gosec] 2026/06/18 16:09:58 Checking file: C:\Code\Projekat\rbs\projekat\cmd\api\main.go
+[gosec] 2026/06/18 16:09:58 Checking package: httpapi
+[gosec] 2026/06/18 16:09:58 Checking file: C:\Code\Projekat\rbs\projekat\internal\api\http\context.go
+[gosec] 2026/06/18 16:09:58 Checking file: C:\Code\Projekat\rbs\projekat\internal\api\http\handlers.go
+[gosec] 2026/06/18 16:09:59 Checking file: C:\Code\Projekat\rbs\projekat\internal\api\http\handlers_invoke.go
+[gosec] 2026/06/18 16:09:59 Checking file: C:\Code\Projekat\rbs\projekat\internal\api\http\handlers_runs.go
+[gosec] 2026/06/18 16:09:59 Checking file: C:\Code\Projekat\rbs\projekat\internal\api\http\invoke_slots.go
+[gosec] 2026/06/18 16:09:59 Checking file: C:\Code\Projekat\rbs\projekat\internal\api\http\middleware.go
+[gosec] 2026/06/18 16:09:59 Checking file: C:\Code\Projekat\rbs\projekat\internal\api\http\ratelimit.go
+[gosec] 2026/06/18 16:09:59 Checking file: C:\Code\Projekat\rbs\projekat\internal\api\http\util.go
+Results:
+
+
+[C:\Code\Projekat\rbs\projekat\internal\verifier\unzip.go:68] - G115 (CWE-190): integer overflow conversion uint64 -> int64 (Confidence: MEDIUM, Severity: HIGH)
+    67:                 }
+  > 68:                 total += int64(f.UncompressedSize64)
+    69:                 if total > opts.MaxUncompressedBytes {
+
+Autofix:
+
+[C:\Code\Projekat\rbs\projekat\internal\verifier\unzip.go:65] - G115 (CWE-190): integer overflow conversion int64 -> uint64 (Confidence: MEDIUM, Severity: HIGH)
+    64:
+  > 65:                 if f.UncompressedSize64 > uint64(opts.MaxFileBytes) {
+    66:                         return fmt.Errorf("file too large: %q", rel)
+
+Autofix:
+
+[C:\Code\Projekat\rbs\projekat\cmd\cli\main.go:529] - G704 (CWE-918): SSRF via taint analysis (Confidence: HIGH, Severity: HIGH)
+    528:        }
+  > 529:        resp, err := http.Post(strings.TrimRight(base, "/")+"/invoke/"+fnID, "application/json", body)
+    530:        if err != nil {
+
+Autofix:
+
+[C:\Code\Projekat\rbs\projekat\cmd\cli\main.go:558] - G703 (CWE-22): Path traversal via taint analysis (Confidence: HIGH, Severity: HIGH)
+    557:                        if strings.HasPrefix(payload, "@") {
+  > 558:                                b, readErr := os.ReadFile(strings.TrimPrefix(payload, "@"))
+    559:                                if readErr != nil {
+
+Autofix:
+
+[C:\Code\Projekat\rbs\projekat\cmd\api\main.go:185] - G703 (CWE-22): Path traversal via taint analysis (Confidence: HIGH, Severity: HIGH)
+    184:        }
+  > 185:        if _, err := os.Stat(rootfsPath); err != nil {
+    186:                return nil, fmt.Errorf("rootfs not found: %w", err)
+
+Autofix:
+
+[C:\Code\Projekat\rbs\projekat\cmd\api\main.go:182] - G703 (CWE-22): Path traversal via taint analysis (Confidence: HIGH, Severity: HIGH)
+    181:        // Verify kernel and rootfs exist
+  > 182:        if _, err := os.Stat(kernelPath); err != nil {
+    183:                return nil, fmt.Errorf("kernel not found: %w", err)
+
+Autofix:
+
+[C:\Code\Projekat\rbs\projekat\cmd\cli\main.go:440] - G122 (CWE-367): Filesystem operation in filepath.Walk/WalkDir callback uses race-prone path; consider root-scoped APIs (e.g. os.Root) to prevent symlink TOCTOU traversal (Confidence: MEDIUM, Severity: HIGH)
+    439:                }
+  > 440:                f, err := os.Open(path)
+    441:                if err != nil {
+
+Autofix:
+
+[C:\Code\Projekat\rbs\projekat\internal\api\http\handlers.go:252] - G120 (CWE-400): Unbounded form parsing in HTTP handlers can cause memory exhaustion (Confidence: HIGH, Severity: MEDIUM)
+    251:                // multipart/form-data with file field "zip"
+  > 252:                if err := r.ParseMultipartForm(50 << 20); err != nil {
+    253:                        httpx.WriteError(w, http.StatusBadRequest, "invalid multipart form")
+
+Autofix:
+
+[C:\Code\Projekat\rbs\projekat\internal\verifier\pip_audit.go:190] - G204 (CWE-78): Subprocess launched with variable (Confidence: HIGH, Severity: MEDIUM)
+    189:                if help.Run() == nil {
+  > 190:                        return exec.Command(bin, append([]string{"-m", "pip_audit"}, args...)...), nil
+    191:                }
+
+Autofix:
+
+[C:\Code\Projekat\rbs\projekat\internal\verifier\pip_audit.go:188] - G204 (CWE-78): Subprocess launched with variable (Confidence: HIGH, Severity: MEDIUM)
+    187:                }
+  > 188:                help := exec.Command(bin, "-m", "pip_audit", "--help")
+    189:                if help.Run() == nil {
+
+Autofix:
+
+[C:\Code\Projekat\rbs\projekat\internal\verifier\pip_audit.go:181] - G204 (CWE-78): Subprocess launched with variable (Confidence: HIGH, Severity: MEDIUM)
+    180:        if path, err := exec.LookPath("pip-audit"); err == nil {
+  > 181:                return exec.Command(path, args...), nil
+    182:        }
+
+Autofix:
+
+[C:\Code\Projekat\rbs\projekat\internal\verifier\pip_audit.go:178] - G204 (CWE-78): Subprocess launched with variable (Confidence: HIGH, Severity: MEDIUM)
+    177:        if override != "" {
+  > 178:                return exec.Command(override, args...), nil
+    179:        }
+
+Autofix:
+
+[C:\Code\Projekat\rbs\projekat\internal\verifier\clamav.go:40] - G204 (CWE-78): Subprocess launched with variable (Confidence: HIGH, Severity: MEDIUM)
+    39:         }
+  > 40:         cmd := exec.CommandContext(ctx, clamscan, args...)
+    41:         var stdout, stderr bytes.Buffer
+
+Autofix:
+
+[C:\Code\Projekat\rbs\projekat\internal\verifier\bandit.go:142] - G204 (CWE-78): Subprocess launched with variable (Confidence: HIGH, Severity: MEDIUM)
+    141:                if probe.Run() == nil {
+  > 142:                        return exec.Command(path, "-m", "bandit", "-r", workDir, "-f", "json", "-q"), nil
+    143:                }
+
+Autofix:
+
+[C:\Code\Projekat\rbs\projekat\internal\verifier\bandit.go:140] - G204 (CWE-78): Subprocess launched with variable (Confidence: HIGH, Severity: MEDIUM)
+    139:                }
+  > 140:                probe := exec.Command(path, "-m", "bandit", "--version")
+    141:                if probe.Run() == nil {
+
+Autofix:
+
+[C:\Code\Projekat\rbs\projekat\internal\verifier\bandit.go:132] - G204 (CWE-78): Subprocess launched with variable (Confidence: HIGH, Severity: MEDIUM)
+    131:        if path, err := exec.LookPath("bandit"); err == nil {
+  > 132:                return exec.Command(path, "-r", workDir, "-f", "json", "-q"), nil
+    133:        }
+
+Autofix:
+
+[C:\Code\Projekat\rbs\projekat\internal\verifier\bandit.go:128] - G204 (CWE-78): Subprocess launched with variable (Confidence: HIGH, Severity: MEDIUM)
+    127:        if override != "" {
+  > 128:                return exec.Command(override, "-r", workDir, "-f", "json", "-q"), nil
+    129:        }
+
+Autofix:
+
+[C:\Code\Projekat\rbs\projekat\internal\runner\firecracker\runner.go:433] - G204 (CWE-78): Subprocess launched with variable (Confidence: HIGH, Severity: MEDIUM)
+    432:
+  > 433:        cmd := exec.CommandContext(ctx, mkfs, "-q", "-F", "-d", srcDir, imagePath)
+    434:        var stderr strings.Builder
+
+Autofix:
+
+[C:\Code\Projekat\rbs\projekat\internal\function\prepare.go:44-49] - G204 (CWE-78): Subprocess launched with variable (Confidence: HIGH, Severity: MEDIUM)
+    43:
+  > 44:         cmd := exec.CommandContext(installCtx, pythonBin,
+  > 45:                 "-m", "pip", "install",
+  > 46:                 "-r", reqPath,
+  > 47:                 "-t", depsDir,
+  > 48:                 "--no-cache-dir",
+  > 49:         )
+    50:         cmd.Dir = workDir
+
+Autofix:
+
+[C:\Code\Projekat\rbs\projekat\internal\verifier\pip_audit.go:77] - G204 (CWE-78): Subprocess launched with a potential tainted input or cmd arguments (Confidence: HIGH, Severity: MEDIUM)
+    76:         defer cancel()
+  > 77:         cmd = exec.CommandContext(ctx, cmd.Path, cmd.Args[1:]...)
+    78:         cmd.Dir = workDir
+
+Autofix:
+
+[C:\Code\Projekat\rbs\projekat\internal\verifier\bandit.go:55] - G204 (CWE-78): Subprocess launched with a potential tainted input or cmd arguments (Confidence: HIGH, Severity: MEDIUM)
+    54:         defer cancel()
+  > 55:         cmd = exec.CommandContext(ctx, cmd.Path, cmd.Args[1:]...)
+    56:
+
+Autofix:
+
+[C:\Code\Projekat\rbs\projekat\internal\runner\local\runner.go:50] - G204 (CWE-78): Subprocess launched with a potential tainted input or cmd arguments (Confidence: HIGH, Severity: MEDIUM)
+    49:
+  > 50:         cmd := exec.CommandContext(ctx, lr.pythonBin, "main.py")
+    51:         cmd.Dir = req.WorkDir
+
+Autofix:
+
+[C:\Code\Projekat\rbs\projekat\internal\runner\firecracker\runner.go:128-130] - G204 (CWE-78): Subprocess launched with a potential tainted input or cmd arguments (Confidence: HIGH, Severity: MEDIUM)
+    127: func (fr *FirecrackerRunner) startFirecracker(socketPath string) (*exec.Cmd, error) {
+  > 128:        cmd := exec.Command(fr.firecrackerBin,
+  > 129:                "--api-sock", socketPath,
+  > 130:        )
+    131:
+
+Autofix:
+
+[C:\Code\Projekat\rbs\projekat\internal\verifier\unzip.go:92] - G304 (CWE-22): Potential file inclusion via variable (Confidence: HIGH, Severity: MEDIUM)
+    91:
+  > 92:         dst, err := os.OpenFile(outPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o644)
+    93:         if err != nil {
+
+Autofix:
+
+[C:\Code\Projekat\rbs\projekat\internal\verifier\structural.go:93] - G304 (CWE-22): Potential file inclusion via variable (Confidence: HIGH, Severity: MEDIUM)
+    92: func checkMagicBytes(path, displayName string) (Finding, bool) {
+  > 93:         b, err := os.ReadFile(path)
+    94:         if err != nil {
+
+Autofix:
+
+[C:\Code\Projekat\rbs\projekat\internal\verifier\requirements.go:68] - G304 (CWE-22): Potential file inclusion via variable (Confidence: HIGH, Severity: MEDIUM)
+    67:
+  > 68:         raw, err := os.ReadFile(reqPath)
+    69:         if err != nil {
+
+Autofix:
+
+[C:\Code\Projekat\rbs\projekat\internal\verifier\pip_audit.go:156] - G304 (CWE-22): Potential file inclusion via variable (Confidence: HIGH, Severity: MEDIUM)
+    155: func RequirementsHasPackages(reqPath string) bool {
+  > 156:        raw, err := os.ReadFile(reqPath)
+    157:        if err != nil {
+
+Autofix:
+
+[C:\Code\Projekat\rbs\projekat\internal\runner\firecracker\runner.go:416] - G304 (CWE-22): Potential file inclusion via variable (Confidence: HIGH, Severity: MEDIUM)
+    415:
+  > 416:        img, err := os.Create(imagePath)
+    417:        if err != nil {
+
+Autofix:
+
+[C:\Code\Projekat\rbs\projekat\internal\runner\firecracker\runner.go:377] - G304 (CWE-22): Potential file inclusion via variable (Confidence: HIGH, Severity: MEDIUM)
+    376:
+  > 377:        dstFile, err := os.Create(dst)
+    378:        if err != nil {
+
+Autofix:
+
+[C:\Code\Projekat\rbs\projekat\internal\runner\firecracker\runner.go:371] - G304 (CWE-22): Potential file inclusion via variable (Confidence: HIGH, Severity: MEDIUM)
+    370: func copyFile(src, dst string) error {
+  > 371:        srcFile, err := os.Open(src)
+    372:        if err != nil {
+
+Autofix:
+
+[C:\Code\Projekat\rbs\projekat\internal\cli\config\config.go:31] - G304 (CWE-22): Potential file inclusion via variable (Confidence: HIGH, Severity: MEDIUM)
+    30:         }
+  > 31:         b, err := os.ReadFile(p)
+    32:         if err != nil {
+
+Autofix:
+
+[C:\Code\Projekat\rbs\projekat\internal\api\http\handlers.go:279] - G304 (CWE-22): Potential file inclusion via variable (Confidence: HIGH, Severity: MEDIUM)
+    278:                dstPath := filepath.Join("storage", "functions", fnID, verID, "src.zip")
+  > 279:                dst, err := os.Create(dstPath)
+    280:                if err != nil {
+
+Autofix:
+
+[C:\Code\Projekat\rbs\projekat\cmd\cli\main.go:440] - G304 (CWE-22): Potential file inclusion via variable (Confidence: HIGH, Severity: MEDIUM)
+    439:                }
+  > 440:                f, err := os.Open(path)
+    441:                if err != nil {
+
+Autofix:
+
+[C:\Code\Projekat\rbs\projekat\internal\verifier\unzip.go:92] - G302 (CWE-276): Expect file permissions to be 0600 or less (Confidence: HIGH, Severity: MEDIUM)
+    91:
+  > 92:         dst, err := os.OpenFile(outPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o644)
+    93:         if err != nil {
+
+Autofix:
+
+[C:\Code\Projekat\rbs\projekat\internal\verifier\verify.go:15] - G301 (CWE-276): Expect directory permissions to be 0750 or less (Confidence: HIGH, Severity: MEDIUM)
+    14:         }
+  > 15:         if err := os.MkdirAll(workDir, 0o755); err != nil {
+    16:                 return nil, fmt.Errorf("create workdir: %w", err)
+
+Autofix:
+
+[C:\Code\Projekat\rbs\projekat\internal\verifier\unzip.go:88] - G301 (CWE-276): Expect directory permissions to be 0750 or less (Confidence: HIGH, Severity: MEDIUM)
+    87:         outPath := filepath.Join(destDir, filepath.FromSlash(rel))
+  > 88:         if err := os.MkdirAll(filepath.Dir(outPath), 0o755); err != nil {
+    89:                 return fmt.Errorf("mkdir for %q: %w", rel, err)
+
+Autofix:
+
+[C:\Code\Projekat\rbs\projekat\internal\runner\firecracker\runner.go:308] - G301 (CWE-276): Expect directory permissions to be 0750 or less (Confidence: HIGH, Severity: MEDIUM)
+    307:        functionCacheDir := filepath.Join(fr.cacheDir, req.FunctionID)
+  > 308:        if err := os.MkdirAll(functionCacheDir, 0o755); err != nil {
+    309:                return "", fmt.Errorf("failed to create function cache directory: %w", err)
+
+Autofix:
+
+[C:\Code\Projekat\rbs\projekat\internal\runner\firecracker\runner.go:72] - G301 (CWE-276): Expect directory permissions to be 0750 or less (Confidence: HIGH, Severity: MEDIUM)
+    71:         runDir := filepath.Join(fr.runsDir, runID)
+  > 72:         if err := os.MkdirAll(runDir, 0o755); err != nil {
+    73:                 return nil, fmt.Errorf("failed to create run directory: %w", err)
+
+Autofix:
+
+[C:\Code\Projekat\rbs\projekat\internal\runner\firecracker\runner.go:44] - G301 (CWE-276): Expect directory permissions to be 0750 or less (Confidence: HIGH, Severity: MEDIUM)
+    43:         cacheDir := filepath.Join(runsDir, "cache", "functions")
+  > 44:         if err := os.MkdirAll(cacheDir, 0o755); err != nil {
+    45:                 return nil, fmt.Errorf("failed to create cache directory: %w", err)
+
+Autofix:
+
+[C:\Code\Projekat\rbs\projekat\internal\runner\firecracker\runner.go:40] - G301 (CWE-276): Expect directory permissions to be 0750 or less (Confidence: HIGH, Severity: MEDIUM)
+    39:         // Create runs directory
+  > 40:         if err := os.MkdirAll(runsDir, 0o755); err != nil {
+    41:                 return nil, fmt.Errorf("failed to create runs directory: %w", err)
+
+Autofix:
+
+[C:\Code\Projekat\rbs\projekat\internal\function\prepare.go:30] - G301 (CWE-276): Expect directory permissions to be 0750 or less (Confidence: HIGH, Severity: MEDIUM)
+    29:         }
+  > 30:         if err := os.MkdirAll(depsDir, 0o755); err != nil {
+    31:                 return fmt.Errorf("create deps dir: %w", err)
+
+Autofix:
+
+[C:\Code\Projekat\rbs\projekat\internal\cli\config\config.go:20] - G301 (CWE-276): Expect directory permissions to be 0750 or less (Confidence: HIGH, Severity: MEDIUM)
+    19:         p := filepath.Join(dir, "oblak")
+  > 20:         if err := os.MkdirAll(p, 0o755); err != nil {
+    21:                 return "", err
+
+Autofix:
+
+[C:\Code\Projekat\rbs\projekat\internal\api\store\sqlite\db.go:17] - G301 (CWE-276): Expect directory permissions to be 0750 or less (Confidence: HIGH, Severity: MEDIUM)
+    16: func Open(dbPath string) (*DB, error) {
+  > 17:         if err := os.MkdirAll(filepath.Dir(dbPath), 0o755); err != nil {
+    18:                 return nil, err
+
+Autofix:
+
+[C:\Code\Projekat\rbs\projekat\internal\api\http\handlers.go:274] - G301 (CWE-276): Expect directory permissions to be 0750 or less (Confidence: HIGH, Severity: MEDIUM)
+    273:
+  > 274:                if err := os.MkdirAll(filepath.Join("storage", "functions", fnID, verID), 0o755); err != nil {
+    275:                        httpx.WriteError(w, http.StatusInternalServerError, "storage mkdir failed")
+
+Autofix:
+
+[C:\Code\Projekat\rbs\projekat\cmd\api\main.go:192] - G301 (CWE-276): Expect directory permissions to be 0750 or less (Confidence: HIGH, Severity: MEDIUM)
+    191:        runsDir := env("OBLAK_RUNS_DIR", filepath.Join(os.TempDir(), "oblak-runs"))
+  > 192:        if err := os.MkdirAll(runsDir, 0o755); err != nil {
+    193:                return nil, fmt.Errorf("failed to create runs directory: %w", err)
+
+Autofix:
+
+[C:\Code\Projekat\rbs\projekat\cmd\api\main.go:28] - G301 (CWE-276): Expect directory permissions to be 0750 or less (Confidence: HIGH, Severity: MEDIUM)
+    27:
+  > 28:         if err := os.MkdirAll("storage", 0o755); err != nil {
+    29:                 log.Fatal(err)
+
+Autofix:
+
+[C:\Code\Projekat\rbs\projekat\cmd\api\main.go:204] - G706 (CWE-117): Log injection via taint analysis (Confidence: HIGH, Severity: LOW)
+    203:        log.Printf("  Kernel: %s", kernelPath)
+  > 204:        log.Printf("  Rootfs: %s", rootfsPath)
+    205:        log.Printf("  Runs:   %s", runsDir)
+
+Autofix:
+
+[C:\Code\Projekat\rbs\projekat\cmd\api\main.go:203] - G706 (CWE-117): Log injection via taint analysis (Confidence: HIGH, Severity: LOW)
+    202:        log.Printf("Firecracker runner initialized successfully")
+  > 203:        log.Printf("  Kernel: %s", kernelPath)
+    204:        log.Printf("  Rootfs: %s", rootfsPath)
+
+Autofix:
+
+[C:\Code\Projekat\rbs\projekat\cmd\api\main.go:162] - G706 (CWE-117): Log injection via taint analysis (Confidence: HIGH, Severity: LOW)
+    161:                log.Printf("  Kernel: %s", fcKernel)
+  > 162:                log.Printf("  Rootfs: %s", fcRootfs)
+    163:
+
+Autofix:
+
+[C:\Code\Projekat\rbs\projekat\cmd\api\main.go:161] - G706 (CWE-117): Log injection via taint analysis (Confidence: HIGH, Severity: LOW)
+    160:                log.Printf("Attempting to initialize Firecracker runner...")
+  > 161:                log.Printf("  Kernel: %s", fcKernel)
+    162:                log.Printf("  Rootfs: %s", fcRootfs)
+
+Autofix:
+
+Summary:
+  Gosec  : dev
+  Files  : 36
+  Lines  : 4261
+  Nosec  : 0
+  Issues : 50
+
+== PYTHON (bandit) ==
+
+PS C:\Code\Projekat\rbs\projekat> python -m bandit -r samples/ -f txt
+[main]  INFO    profile include tests: None
+[main]  INFO    profile exclude tests: None
+[main]  INFO    cli include tests: None
+[main]  INFO    cli exclude tests: None
+[main]  INFO    running on Python 3.13.5
+Run started:2026-06-18 14:13:15.589739+00:00
+
+Test results:
+>> Issue: [B307:blacklist] Use of possibly insecure function - consider using safer ast.literal_eval.
+   Severity: Medium   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/blacklists/blacklist_calls.html#b307-eval
+   Location: samples/malicious\eval_exec\main.py:3:22
+2           code = event.get("code", "1+1") if event else "1+1"
+3           return {"result": eval(code)}
+
+--------------------------------------------------
+>> Issue: [B404:blacklist] Consider possible security implications associated with the subprocess module.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/blacklists/blacklist_imports.html#b404-import-subprocess
+   Location: samples/malicious\subprocess_shell\main.py:1:0
+1       import subprocess
+2
+3
+
+--------------------------------------------------
+>> Issue: [B607:start_process_with_partial_path] Starting a process with a partial executable path
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b607_start_process_with_partial_path.html
+   Location: samples/malicious\subprocess_shell\main.py:5:4
+4       def handler(event=None):
+5           subprocess.call("whoami", shell=True)
+6           return {"ok": True}
+
+--------------------------------------------------
+>> Issue: [B602:subprocess_popen_with_shell_equals_true] subprocess call with shell=True seems safe, but may be changed in the future, consider rewriting without shell
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b602_subprocess_popen_with_shell_equals_true.html
+   Location: samples/malicious\subprocess_shell\main.py:5:4
+4       def handler(event=None):
+5           subprocess.call("whoami", shell=True)
+6           return {"ok": True}
+
+--------------------------------------------------
+
+Code scanned:
+        Total lines of code: 55
+        Total lines skipped (#nosec): 0
+        Total potential issues skipped due to specifically being disabled (e.g., #nosec BXXX): 0
+
+Run metrics:
+        Total issues (by severity):
+                Undefined: 0
+                Low: 3
+                Medium: 1
+                High: 0
+        Total issues (by confidence):
+                Undefined: 0
+                Low: 0
+                Medium: 0
+                High: 4
+Files skipped (0):

@@ -1,10 +1,10 @@
-# Oblak - kostur dokumentacije
+# Oblak
 
 ## 1. Uvod
 
 Oblak je serverless platforma za izvršavanje korisničkog Python koda na serveru. Ideja sistema je slična servisima kao što su AWS Lambda ili Google Cloud Functions: korisnik kroz CLI šalje kod, server ga proverava, priprema za izvršavanje, objavljuje funkciju i omogućava pokretanje preko generisanog HTTP endpoint-a.
 
-Ovaj dokument predstavlja početni kostur projektne dokumentacije. Zasniva se na projektnom uputstvu iz fajla `Oblak.md` i postojećim tehničkim dokumentima u repozitorijumu:
+Ovaj dokument predstavlja projektnu dokumentaciju i zasniva se na projektnom uputstvu iz fajla `Oblak.md` i postojećim tehničkim dokumentima u repozitorijumu:
 
 - `README.md`
 - `RUNNER_SYSTEM.md`
@@ -320,38 +320,13 @@ Bezbednosni zahtevi sistema:
 
 ## 8. Model pretnji
 
-### 8.1 Akteri
+### 8.1 Nivo 0
 
-- legitimni korisnik platforme
-- napadač bez naloga
-- napadač sa validnim nalogom
-- maliciozna funkcija poslata kroz CLI
-- kompromitovan ili ranjiv dependency
-- administrator sistema
+![Model pretnji - Nivo 0](threat%20model%20-%20level%200.png)
 
-### 8.2 Vrednosti koje se štite
+### 8.2 Nivo 1
 
-- host sistem
-- baza podataka
-- tokeni i kredencijali
-- izvorni kod funkcija
-- rezultati izvršavanja
-- integritet verifier pipeline-a
-- Firecracker kernel i rootfs slike
-- logovi i audit tragovi
-
-### 8.3 Granice poverenja
-
-Granice poverenja postoje između:
-
-- korisnika i API servera
-- CLI alata i mreže
-- upload arhive i verifier-a
-- verifier-a i deploy faze
-- API servera i runner-a
-- hosta i Firecracker VM-a
-- guest agent-a i korisničke funkcije
-- aplikacije i baze podataka
+![Model pretnji - Nivo 1](threat%20model%20-%20level%201.png)
 
 ## 9. STRIDE analiza
 
@@ -389,17 +364,292 @@ Otvoreno za dopunu:
 
 ## 11. Statička analiza i skeniranje softvera
 
-Za korisnički Python kod koristi se Bandit. Za antivirus skeniranje opciono se koristi ClamAV. Za Go kod projekta treba navesti i izvršiti dodatne alate.
+U okviru bezbednosne evaluacije projekta izvršena je statička analiza izvornog koda korišćenjem alata prilagođenih tehnologijama koje se koriste u sistemu. Pošto je platforma implementirana kombinacijom Go i Python komponenti, analiza je obuhvatila oba programska jezika.
 
-Predloženi alati:
+Korišćeni alati:
 
-- `go test ./...`
-- `go vet ./...`
-- `gosec ./...`
-- Bandit za Python sample funkcije
-- ClamAV za upload pakete
+- `gosec` za bezbednosnu analizu Go koda
+- `go vet` za detekciju potencijalnih grešaka i nekonzistentnosti u Go kodu
+- `Bandit` za bezbednosnu analizu Python koda
 
-U finalnoj dokumentaciji treba dodati rezultate pokretanja alata i nalaze code review-a.
+Cilj analize bio je identifikacija potencijalnih ranjivosti, nebezbednih obrazaca programiranja i mesta koja zahtevaju dodatno ojačavanje pre produkcione upotrebe sistema.
+
+### 11.1 Analiza Go koda
+
+Analiza Go dela sistema izvršena je alatom `gosec` nad kompletnim izvornim kodom projekta.
+
+Obuhvaćeni su:
+
+- API server
+- CLI alat
+- verifier pipeline
+- Firecracker runner
+- lokalni runner
+- SQLite sloj za skladištenje podataka
+
+Rezultat analize:
+
+| Metrika | Vrednost |
+|----------|-----------|
+| Broj analiziranih fajlova | 36 |
+| Broj linija koda | 4261 |
+| Ukupan broj nalaza | 50 |
+
+Većina prijavljenih nalaza može se grupisati u nekoliko kategorija.
+
+#### 11.1.1 Izvršavanje eksternih procesa
+
+Najveći broj nalaza odnosi se na pravilo G204 (*Subprocess launched with variable*).
+
+Ovi nalazi pojavljuju se u komponentama koje pozivaju:
+
+- Bandit
+- ClamAV
+- pip-audit
+- Python interpreter
+- Firecracker binarni fajl
+- alate za kreiranje ext4 image-a
+
+Primer:
+
+```go
+exec.Command(path, "-r", workDir, "-f", "json", "-q")
+```
+
+Ovakvi nalazi su očekivani jer sistem po svojoj prirodi mora da pokreće spoljne procese radi:
+
+- verifikacije korisničkog koda
+- instalacije zavisnosti
+- pokretanja Firecracker VM-ova
+- izvršavanja korisničkih funkcija
+
+U analiziranom kodu nije uočeno direktno prosleđivanje korisničkog ulaza komandnom interpreteru (`cmd.exe`, `sh`, `bash`), što značajno smanjuje rizik od klasičnog command injection napada.
+
+Ipak, preporučuje se:
+
+- korišćenje apsolutnih putanja ka izvršnim fajlovima
+- validacija svih putanja do eksternih alata
+- ograničavanje promenljivih okruženja koje se prosleđuju procesima
+- dodatno logovanje svih izvršenih komandi u audit tragovima
+
+#### 11.1.2 Path Traversal i rad sa fajl sistemom
+
+Alat je prijavio više nalaza vezanih za CWE-22 (*Path Traversal*).
+
+Primeri:
+
+```go
+os.ReadFile(path)
+os.Open(src)
+os.Create(dst)
+os.OpenFile(outPath, ...)
+```
+
+Posebno su interesantni nalazi u:
+
+- upload pipeline-u
+- raspakivanju ZIP arhiva
+- obradi korisničkih payload fajlova
+- radu sa Firecracker image fajlovima
+
+Međutim, analiza celokupne arhitekture pokazuje da sistem već poseduje više slojeva zaštite:
+
+- structural verifier proverava sadržaj arhive
+- proverava se prisustvo očekivanih fajlova
+- blokirani su pokušaji path traversal napada tokom raspakivanja
+- ograničena je struktura funkcijskog paketa
+
+Zbog toga se značajan deo prijavljenih nalaza može posmatrati kao upozorenje koje zahteva dodatnu proveru, ali ne predstavlja automatski potvrđenu ranjivost.
+
+Preporučena unapređenja:
+
+- dodatna normalizacija svih putanja pomoću `filepath.Clean`
+- eksplicitna provera da li putanja ostaje unutar dozvoljenog direktorijuma
+- korišćenje root-scoped pristupa fajl sistemu gde je moguće
+- dodatni testovi za ZIP Slip i slične napade
+
+#### 11.1.3 Kontrola veličine podataka i DoS otpornost
+
+Jedan od značajnijih nalaza odnosi se na potencijalni integer overflow tokom obrade ZIP arhiva:
+
+```go
+total += int64(f.UncompressedSize64)
+```
+
+Ovaj nalaz je klasifikovan kao:
+
+- CWE-190
+- Severity: High
+
+Pošto sistem prima korisničke arhive, ovakva provera je posebno značajna.
+
+Moguća posledica je:
+
+- pogrešan obračun ukupne veličine raspakovanog sadržaja
+- zaobilaženje ograničenja veličine arhive
+- ZIP bomb scenariji
+
+Preporučuje se:
+
+- eksplicitna provera overflow uslova pre konverzije tipova
+- korišćenje bezbednih pomoćnih funkcija za sabiranje veličina
+- dodatni limiti na broj fajlova u arhivi
+
+#### 11.1.4 SSRF mogućnost
+
+Detektovan je nalaz:
+
+```go
+http.Post(strings.TrimRight(base, "/")+"/invoke/"+fnID, ...)
+```
+
+klasifikovan kao:
+
+- CWE-918
+- SSRF (Server Side Request Forgery)
+
+U konkretnom slučaju nalazi se u CLI komponenti.
+
+Pošto vrednost `base` predstavlja URL servera koji korisnik eksplicitno konfiguriše, rizik je značajno manji nego kod server-side SSRF scenarija.
+
+Ipak, preporučuje se:
+
+- validacija dozvoljenih URL šema (`http`, `https`)
+- opciona lista dozvoljenih domena
+- zabrana pristupa lokalnim adresama u produkcionim okruženjima
+
+#### 11.1.5 Dozvole nad fajlovima i direktorijumima
+
+Prijavljen je veći broj nalaza tipa:
+
+- G301
+- G302
+
+Primer:
+
+```go
+os.MkdirAll(path, 0755)
+os.OpenFile(path, ..., 0644)
+```
+
+Sa aspekta bezbednog softvera preporučuju se restriktivnije dozvole:
+
+- direktorijumi: `0750`
+- fajlovi: `0600`
+
+Posebno za:
+
+- konfiguracione fajlove
+- tokene
+- bazu podataka
+- privremene Firecracker resurse
+
+#### 11.1.6 Log Injection
+
+Detektovani su i nalazi niske ozbiljnosti vezani za logovanje putanja koje potiču iz konfiguracije.
+
+Primer:
+
+```go
+log.Printf("Kernel: %s", kernelPath)
+```
+
+Rizik je nizak, ali se preporučuje:
+
+- sanitizacija kontrolnih karaktera
+- strukturisano logovanje
+- centralizovan audit format
+
+### 11.2 Analiza Python koda
+
+Python analiza izvršena je alatom `Bandit` nad uzorcima funkcija predviđenim za testiranje verifier sistema.
+
+Rezultati:
+
+| Ozbiljnost | Broj nalaza |
+|------------|-------------|
+| Low | 3 |
+| Medium | 1 |
+| High | 0 |
+
+Bandit je uspešno detektovao sve namerno ubačene nebezbedne konstrukcije.
+
+#### 11.2.1 Upotreba eval()
+
+Detektovana je funkcija:
+
+```python
+return {"result": eval(code)}
+```
+
+Bandit je prijavio:
+
+- B307
+- Medium severity
+
+Ovo predstavlja klasičan primer proizvoljnog izvršavanja koda i upravo je jedan od obrazaca koje verifier treba da blokira.
+
+Nalaz potvrđuje da verifier pravilno identifikuje jednu od najčešćih Python ranjivosti.
+
+#### 11.2.2 Upotreba subprocess modula
+
+Bandit je identifikovao:
+
+```python
+import subprocess
+subprocess.call("whoami", shell=True)
+```
+
+Prijavljeni nalazi:
+
+- B404
+- B607
+- B602
+
+Ovi nalazi ukazuju na:
+
+- pokretanje eksternih procesa
+- korišćenje `shell=True`
+- oslanjanje na parcijalne putanje izvršnih fajlova
+
+U realnom produkcionom okruženju ovakav kod može predstavljati osnovu za command injection napade.
+
+Važno je primetiti da je upravo ovakav primer uspešno označen kao maliciozan tokom verifikacije funkcije, što potvrđuje ispravnost implementiranog bezbednosnog pipeline-a.
+
+### 11.3 Zaključci statičke analize
+
+Rezultati statičke analize pokazuju da sistem poseduje relativno dobru početnu bezbednosnu osnovu za projekat čija je osnovna funkcija izvršavanje nepoverljivog korisničkog koda.
+
+Posebno je značajno što:
+
+- verifier uspešno detektuje poznate opasne Python konstrukcije
+- postoje mehanizmi za proveru arhiva i strukture paketa
+- izvršavanje korisničkog koda predviđeno je unutar Firecracker microVM okruženja
+- arhitektura jasno razdvaja verifier, deploy i execution faze
+
+Sa druge strane, analiza je identifikovala oblasti koje zahtevaju dodatno ojačavanje:
+
+- strožu validaciju putanja i rada sa fajl sistemom
+- otpornost na ZIP bomb i slične DoS napade
+- restriktivnije dozvole nad fajlovima i direktorijumima
+- dodatnu validaciju eksternih komandi i putanja izvršnih fajlova
+- detaljnije audit logovanje
+- stroža ograničenja memorije, CPU vremena i veličine izlaza funkcija
+
+### 11.4 Preporuke za dalje unapređenje
+
+U skladu sa principima razvoja bezbednog softvera preporučuju se sledeći koraci:
+
+1. Uvesti automatsko pokretanje `gosec`, `go vet`, `Bandit` i `pip-audit` kroz CI/CD proces.
+2. Dodati obaveznu code review proceduru za bezbednosno osetljive delove sistema.
+3. Implementirati strožu validaciju svih korisnički kontrolisanih putanja.
+4. Uvesti ograničenja nad veličinom arhiva, payload-a i izlaznih podataka funkcija.
+5. Aktivirati Firecracker jailer i seccomp profile u produkcionom okruženju.
+6. Uvesti detaljniji audit sistem sa korelacionim identifikatorima.
+7. Razmotriti SAST i dependency scanning kao obavezni deo procesa objavljivanja novih verzija sistema.
+8. Uvesti periodično skeniranje rootfs slike i svih zavisnosti koje se koriste tokom izvršavanja funkcija.
+
+Statička analiza nije otkrila kritične ranjivosti koje bi onemogućile dalje korišćenje sistema u razvojnom okruženju, ali je identifikovala više oblasti koje treba dodatno unaprediti pre produkcione upotrebe. Rezultati potvrđuju da su najvažnije bezbednosne kontrole — verifier pipeline i Firecracker izolacija — usmerene upravo na rizike koji su karakteristični za serverless platforme namenjene izvršavanju nepoverljivog korisničkog koda.
 
 ## 12. Test primeri
 
@@ -523,32 +773,25 @@ Trenutna implementacija predstavlja funkcionalan skeleton platforme, ali određe
 - potrebno je proširiti reviziju i audit događaje
 - potrebno je proveriti ponašanje pri paralelnim izvršavanjima
 
-## 15. Predlog strukture finalne dokumentacije
+## 15. Zaključak
 
-Finalni dokument može biti organizovan ovako:
+Projekat Oblak predstavlja implementaciju serverless platforme namenjene izvršavanju nepoverljivog korisničkog Python koda, pri čemu je bezbednost razmatrana kao sastavni deo arhitekture sistema, a ne kao naknadno dodata funkcionalnost. Tokom razvoja primenjen je višeslojni pristup zaštiti koji obuhvata autentikaciju korisnika, verifikaciju dostavljenog koda, kontrolisano objavljivanje funkcija, audit događaja i izolovano izvršavanje unutar Firecracker microVM okruženja.
 
-1. Uvod i cilj projekta
-2. Funkcionalni zahtevi
-3. Arhitektura sistema
-4. API i CLI tokovi
-5. Skladištenje funkcija i verzionisanje
-6. Verifikacioni pipeline
-7. Runner sistem
-8. Firecracker arhitektura
-9. Analiza izvršavanja koda u VM-u
-10. Bezbednosni zahtevi
-11. Model pretnji
-12. STRIDE analiza
-13. Implementirane mere ublažavanja
-14. Otvorene bezbednosne stavke
-15. Revizija, audit i logovanje
-16. Statička analiza i rezultati alata
-17. Code review proces
-18. Test primeri, benigni i maliciozni
-19. Uputstvo za pokretanje
-20. Firecracker performanse i cache funkcijskih image-a
-21. Zaključak
+Izrađeni model pretnji identifikovao je najvažnije aktere, vrednosti koje se štite i granice poverenja u sistemu. STRIDE analiza pokazala je da najveći rizici proizlaze iz same prirode platforme, odnosno iz činjenice da korisnici imaju mogućnost dostavljanja i pokretanja proizvoljnog programskog koda. Kao najznačajnije kategorije pretnji izdvajaju se pokušaji izvršavanja malicioznog koda, napadi uskraćivanjem usluge, curenje podataka kroz izlaz funkcije i potencijalni pokušaji izlaska iz izolovanog okruženja.
 
-## 16. Zaključak
+Rezultati statičke analize potvrdili su da implementacija već poseduje značajan broj bezbednosnih kontrola. Bandit analiza uspešno identifikuje opasne Python konstrukcije poput `eval()` funkcije i pokretanja eksternih procesa, dok Go analiza nije otkrila kritične ranjivosti koje bi direktno kompromitovale sistem. Istovremeno, analiza je ukazala na oblasti koje zahtevaju dodatno unapređenje, pre svega u domenu validacije putanja, kontrole pristupa fajl sistemu, zaštite od DoS scenarija i strožeg upravljanja privilegijama.
 
-Oblak platforma već ima jasnu podelu na API, CLI, verifier i runner sloj. Najvažniji bezbednosni mehanizam za produkciono izvršavanje je Firecracker microVM, jer odvaja korisnički kod od host sistema i svodi komunikaciju na kontrolisani kanal preko guest agent-a. Finalnu dokumentaciju treba proširiti detaljnim STRIDE modelom, rezultatima statičke analize, opisom audit mehanizama i dokazima kroz benigno i maliciozno testiranje.
+Najznačajniji bezbednosni mehanizam sistema predstavlja Firecracker runner, koji omogućava da se korisnički kod izvršava u posebnoj microVM instanci sa odvojenim kernel kontekstom i ograničenom komunikacijom prema host sistemu. Na taj način smanjuje se rizik da eventualno kompromitovana ili maliciozna funkcija utiče na integritet ostatka platforme. Dodatni sloj zaštite obezbeđuje verifier pipeline, koji sprečava objavljivanje funkcija koje ne zadovoljavaju definisane bezbednosne kriterijume.
+
+Posmatrano iz perspektive predmeta *Razvoj bezbednog softvera*, projekat demonstrira primenu ključnih principa bezbednog razvoja:
+
+- identifikaciju i modelovanje pretnji pre implementacije zaštitnih mehanizama,
+- primenu principa najmanjih privilegija i izolacije,
+- korišćenje automatizovane statičke analize tokom razvoja,
+- višeslojnu odbranu (*defense in depth*),
+- praćenje i reviziju bezbednosno relevantnih događaja,
+- kontinuiranu procenu i unapređenje bezbednosnog položaja sistema.
+
+Iako postoje otvorene stavke za dalje unapređenje, poput detaljnije kontrole resursa, aktiviranja Firecracker jailer i seccomp mehanizama, proširenog audit sistema, rate limiting-a i naprednijeg upravljanja tajnama, trenutna implementacija uspešno ostvaruje osnovni cilj projekta: bezbednije izvršavanje korisničkog koda u odnosu na tradicionalno pokretanje procesa direktno na host sistemu.
+
+Može se zaključiti da Oblak predstavlja funkcionalan i bezbednosno osvešćen prototip serverless platforme koji demonstrira praktičnu primenu principa razvoja bezbednog softvera i pruža dobru osnovu za dalje proširenje ka produkcionom okruženju.
