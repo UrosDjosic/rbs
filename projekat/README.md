@@ -4,7 +4,7 @@ Minimalni “platform skeleton” za serverless Python funkcije.
 
 - **API** (Go): health, login, auth, upload funkcija, verifier, publish, invoke (stub)
 - **CLI** (Go): `login`, `deploy`, `publish`, `list`, `invoke`
-- **Verifier**: strukturni AV + ClamAV (opciono) + Bandit
+- **Verifier**: strukturni AV + ClamAV (opciono) + Bandit + requirements policy + pip-audit
 
 ### Preduslovi na serveru
 
@@ -13,6 +13,13 @@ Minimalni “platform skeleton” za serverless Python funkcije.
 ```powershell
 pip install bandit
 python -m bandit --version
+```
+
+**pip-audit** (obavezno ako `requirements.txt` ima zavisnosti):
+
+```powershell
+pip install pip-audit
+pip-audit --version
 ```
 
 **ClamAV** (opciono — ako nije dostupan, sloj se preskače):
@@ -57,6 +64,8 @@ Posle uploada API automatski pokreće:
 1. **structural_av** — unpack + policy (ekstenzije, path traversal, magic bytes)
 2. **clamav** — `clamscan -r workdir` (ako nije instaliran → preskočeno)
 3. **static_bandit** — Bandit JSON sken (`LOW+` severity → reject)
+4. **requirements_policy** — samo pinovane zavisnosti (`pkg==1.2.3`), bez git/URL/index
+5. **dependency_audit** — `pip-audit -r requirements.txt` (CVE → reject; preskočeno ako nema deps)
 
 Status verzije: `verified` ili `rejected`. `publish` dozvoljen samo za `verified`.
 
@@ -77,6 +86,7 @@ go run ./cmd/verifier --zip path\to\src.zip --skip-bandit
 | `samples/malicious/missing_main` | rejected (structural) |
 | `samples/malicious/forbidden_script` | rejected (structural) |
 | `samples/malicious/nested_main` | rejected (structural) |
+| `samples/malicious/unpinned_requirements` | rejected (requirements_policy) |
 
 ### Endpoints
 

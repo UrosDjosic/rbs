@@ -57,6 +57,9 @@ CREATE TABLE IF NOT EXISTS runs (
   created_at TEXT NOT NULL,
   finished_at TEXT,
   message TEXT,
+  exit_code INTEGER,
+  stdout TEXT,
+  stderr TEXT,
   FOREIGN KEY(function_id) REFERENCES functions(id) ON DELETE CASCADE,
   FOREIGN KEY(version_id) REFERENCES function_versions(id) ON DELETE CASCADE
 );

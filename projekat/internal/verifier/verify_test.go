@@ -31,7 +31,7 @@ func writeZip(t *testing.T, path string, entries map[string]string) {
 }
 
 func structuralOnlyOpts() *Options {
-	return &Options{SkipBandit: true}
+	return &Options{SkipBandit: true, SkipPipAudit: true}
 }
 
 func TestVerifyBenign(t *testing.T) {

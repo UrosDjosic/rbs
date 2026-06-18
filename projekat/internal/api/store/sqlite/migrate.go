@@ -10,6 +10,9 @@ func (d *DB) Migrate(ctx context.Context) error {
 	alters := []string{
 		`ALTER TABLE functions ADD COLUMN active_version_id TEXT`,
 		`ALTER TABLE functions ADD COLUMN deployed_at TEXT`,
+		`ALTER TABLE runs ADD COLUMN exit_code INTEGER`,
+		`ALTER TABLE runs ADD COLUMN stdout TEXT`,
+		`ALTER TABLE runs ADD COLUMN stderr TEXT`,
 	}
 	for _, q := range alters {
 		if _, err := d.SQL.ExecContext(ctx, q); err != nil {

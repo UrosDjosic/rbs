@@ -11,6 +11,8 @@ type Options struct {
 	SkipClamAV           bool
 	ClamScanPath         string // optional override, e.g. C:\Program Files\ClamAV\clamscan.exe
 	ClamAVDatabaseDir    string // virus DB dir for clamscan -d (default: storage/clamav/database)
+	SkipPipAudit         bool
+	PipAuditPath         string // optional override for pip-audit binary
 }
 
 func DefaultOptions() Options {

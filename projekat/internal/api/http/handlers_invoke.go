@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 	"path/filepath"
 	"time"
@@ -9,8 +10,12 @@ import (
 	"oblak/internal/api/store/sqlite"
 	"oblak/internal/common/httpx"
 	"oblak/internal/common/ids"
+	"oblak/internal/function"
 	"oblak/internal/runner"
 )
+
+const maxInvokePayloadBytes = 1 << 20 // 1 MiB
+const maxRunOutputBytes = 64 << 10    // 64 KiB per stream in DB
 
 func (s *Server) handleFunctionDeploy(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -56,6 +61,16 @@ func (s *Server) handleFunctionDeploy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	workDir := filepath.Join("storage", "functions", fnID, ver.ID, "work")
+	if err := function.InstallDependencies(r.Context(), workDir, ""); err != nil {
+		httpx.WriteError(w, http.StatusInternalServerError, "dependency install failed: "+err.Error())
+		return
+	}
+	if err := function.InvalidateExt4Cache(s.RunsDir, fnID, ver.ID); err != nil {
+		httpx.WriteError(w, http.StatusInternalServerError, "cache invalidation failed")
+		return
+	}
+
 	now := time.Now()
 	if err := s.DB.DeployFunction(r.Context(), fnID, ver.ID, now); err != nil {
 		httpx.WriteError(w, http.StatusInternalServerError, "deploy failed")
@@ -92,22 +107,37 @@ func (s *Server) handleInvoke(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	release, ok := s.acquireInvokeSlot()
+	if !ok {
+		httpx.WriteError(w, http.StatusServiceUnavailable, "too many concurrent invocations")
+		return
+	}
+	defer release()
+
 	runID, err := ids.NewToken(16)
 	if err != nil {
 		httpx.WriteError(w, http.StatusInternalServerError, "id generation failed")
 		return
 	}
 
-	// Prepare work directory path
 	workDir := filepath.Join("storage", "functions", fnID, dep.ActiveVersionID, "work")
 
-	// Invoke the function using the configured runner
+	payload, err := io.ReadAll(io.LimitReader(r.Body, maxInvokePayloadBytes+1))
+	if err != nil {
+		httpx.WriteError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if len(payload) > maxInvokePayloadBytes {
+		httpx.WriteError(w, http.StatusRequestEntityTooLarge, "payload too large")
+		return
+	}
+
 	ctx := r.Context()
 	result, err := s.Runner.Invoke(ctx, runner.InvokeRequest{
 		FunctionID: fnID,
 		VersionID:  dep.ActiveVersionID,
 		WorkDir:    workDir,
-		Payload:    nil, // TODO: Read from request body if needed
+		Payload:    payload,
 	})
 
 	now := time.Now()
@@ -138,7 +168,10 @@ func (s *Server) handleInvoke(w http.ResponseWriter, r *http.Request) {
 		message = &errMsg
 	}
 
-	// Record the run in the database
+	exitCode := result.ExitCode
+	stdout := truncateRunOutput(result.Stdout)
+	stderr := truncateRunOutput(result.Stderr)
+
 	if err := s.DB.InsertRun(r.Context(), sqlite.Run{
 		ID:         runID,
 		FunctionID: fnID,
@@ -147,6 +180,9 @@ func (s *Server) handleInvoke(w http.ResponseWriter, r *http.Request) {
 		CreatedAt:  now,
 		FinishedAt: &now,
 		Message:    message,
+		ExitCode:   &exitCode,
+		Stdout:     &stdout,
+		Stderr:     &stderr,
 	}); err != nil {
 		httpx.WriteError(w, http.StatusInternalServerError, "run insert failed")
 		return
@@ -163,4 +199,11 @@ func (s *Server) handleInvoke(w http.ResponseWriter, r *http.Request) {
 		"stderr":      result.Stderr,
 		"message":     message,
 	})
+}
+
+func truncateRunOutput(s string) string {
+	if len(s) <= maxRunOutputBytes {
+		return s
+	}
+	return s[:maxRunOutputBytes] + "\n... [truncated]"
 }

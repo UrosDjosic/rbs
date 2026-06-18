@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
@@ -59,17 +60,37 @@ func main() {
 	runnerInstance := initRunner()
 	defer runnerInstance.Close()
 
-	api := httpapi.Server{DB: db, PublicBaseURL: publicURL, Runner: runnerInstance}
+	runsDir := env("OBLAK_RUNS_DIR", filepath.Join(os.TempDir(), "oblak-runs"))
+	api := httpapi.Server{
+		DB:            db,
+		PublicBaseURL: publicURL,
+		Runner:        runnerInstance,
+		RunsDir:       runsDir,
+		LoginLimiter:  httpapi.NewIPRateLimiter(envInt("OBLAK_LOGIN_RATE_PER_MIN", 10), time.Minute),
+		InvokeLimiter: httpapi.NewIPRateLimiter(envInt("OBLAK_INVOKE_RATE_PER_MIN", 60), time.Minute),
+		InvokeSlots:   httpapi.NewInvokeSlots(envInt("OBLAK_MAX_CONCURRENT_INVOKES", 8)),
+	}
 	api.Register(mux, ui)
+
+	readTimeout := envDuration("OBLAK_READ_TIMEOUT", 30*time.Second)
+	writeTimeout := envDuration("OBLAK_WRITE_TIMEOUT", 120*time.Second)
+	idleTimeout := envDuration("OBLAK_IDLE_TIMEOUT", 60*time.Second)
 
 	srv := &nethttp.Server{
 		Addr:              addr,
 		Handler:           mux,
 		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       readTimeout,
+		WriteTimeout:      writeTimeout,
+		IdleTimeout:       idleTimeout,
 	}
 
 	log.Printf("api listening on http://%s", addr)
 	log.Printf("ui at http://%s/ui", addr)
+	log.Printf("limits: login=%d/min invoke=%d/min max_concurrent_invokes=%d",
+		envInt("OBLAK_LOGIN_RATE_PER_MIN", 10),
+		envInt("OBLAK_INVOKE_RATE_PER_MIN", 60),
+		envInt("OBLAK_MAX_CONCURRENT_INVOKES", 8))
 	log.Fatal(srv.ListenAndServe())
 }
 
@@ -103,6 +124,30 @@ func env(k, def string) string {
 		return v
 	}
 	return def
+}
+
+func envInt(k string, def int) int {
+	v := os.Getenv(k)
+	if v == "" {
+		return def
+	}
+	n, err := strconv.Atoi(v)
+	if err != nil || n < 0 {
+		return def
+	}
+	return n
+}
+
+func envDuration(k string, def time.Duration) time.Duration {
+	v := os.Getenv(k)
+	if v == "" {
+		return def
+	}
+	d, err := time.ParseDuration(v)
+	if err != nil || d <= 0 {
+		return def
+	}
+	return d
 }
 
 func initRunner() runner.Runner {

@@ -120,6 +120,11 @@ def execute_function(fn_id: str, version_id: str, payload: str) -> dict:
         }
     
     try:
+        env = os.environ.copy()
+        deps_path = Path(FUNCTION_MOUNT_PATH) / "deps"
+        if deps_path.is_dir():
+            env["PYTHONPATH"] = str(deps_path)
+
         # Execute the function script
         result = subprocess.run(
             [sys.executable, str(script_path)],
@@ -127,6 +132,7 @@ def execute_function(fn_id: str, version_id: str, payload: str) -> dict:
             capture_output=True,
             timeout=EXECUTION_TIMEOUT,
             cwd=str(Path(FUNCTION_MOUNT_PATH)),
+            env=env,
         )
         
         logger.info(

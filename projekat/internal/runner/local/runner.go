@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 
 	"oblak/internal/runner"
 )
@@ -20,9 +21,22 @@ type LocalRunner struct {
 // NewLocalRunner creates a new local runner using the system Python
 func NewLocalRunner(pythonBin string) *LocalRunner {
 	if pythonBin == "" {
-		pythonBin = "python3"
+		pythonBin = resolvePythonBin()
 	}
 	return &LocalRunner{pythonBin: pythonBin}
+}
+
+func resolvePythonBin() string {
+	candidates := []string{"python3", "python"}
+	if runtime.GOOS == "windows" {
+		candidates = []string{"python", "python3"}
+	}
+	for _, bin := range candidates {
+		if path, err := exec.LookPath(bin); err == nil {
+			return path
+		}
+	}
+	return "python3"
 }
 
 // Invoke executes a function by running main.py with the provided payload
@@ -33,9 +47,11 @@ func (lr *LocalRunner) Invoke(ctx context.Context, req runner.InvokeRequest) (*r
 		return nil, fmt.Errorf("main.py not found: %w", err)
 	}
 
-	// Prepare command to run Python script
-	cmd := exec.CommandContext(ctx, lr.pythonBin, mainPath)
+	cmd := exec.CommandContext(ctx, lr.pythonBin, "main.py")
 	cmd.Dir = req.WorkDir
+	if depsDir := filepath.Join(req.WorkDir, "deps"); dirExists(depsDir) {
+		cmd.Env = append(os.Environ(), "PYTHONPATH="+depsDir)
+	}
 
 	// Set up I/O
 	var stdout, stderr bytes.Buffer
@@ -68,4 +84,9 @@ func (lr *LocalRunner) Invoke(ctx context.Context, req runner.InvokeRequest) (*r
 // Close performs cleanup (no-op for local runner)
 func (lr *LocalRunner) Close() error {
 	return nil
+}
+
+func dirExists(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && info.IsDir()
 }

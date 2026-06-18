@@ -64,7 +64,7 @@ func TestVerifyBanditBenign(t *testing.T) {
 	if !result.OK || result.Status != StatusVerified {
 		t.Fatalf("expected verified, got %+v", result)
 	}
-	if len(result.Layers) != 3 {
-		t.Fatalf("expected 3 layers, got %d", len(result.Layers))
+	if len(result.Layers) != 5 {
+		t.Fatalf("expected 5 layers, got %d", len(result.Layers))
 	}
 }
