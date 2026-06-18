@@ -118,6 +118,40 @@
             ]
           },
           {
+            "shape": "trust-boundary-curve",
+            "width": 200,
+            "height": 100,
+            "zIndex": -1,
+            "connector": "smooth",
+            "data": {
+              "type": "tm.Boundary",
+              "name": "Guest Agent/User Function Boundary",
+              "description": "",
+              "isTrustBoundary": true,
+              "hasOpenThreats": false,
+              "crossingFlows": [],
+              "containedElements": []
+            },
+            "labels": [
+              "Guest Agent/User Function Boundary"
+            ],
+            "id": "4f213208-da66-4222-be3e-0cfefcb72004",
+            "source": {
+              "x": 183,
+              "y": 1331
+            },
+            "target": {
+              "x": 1100,
+              "y": 1400
+            },
+            "vertices": [
+              {
+                "x": 110,
+                "y": 1370
+              }
+            ]
+          },
+          {
             "position": {
               "x": 70,
               "y": 30
@@ -1149,6 +1183,53 @@
                 "y": 1140
               }
             ]
+          },
+          {
+            "shape": "flow",
+            "attrs": {
+              "line": {
+                "stroke": "#333333",
+                "targetMarker": {
+                  "name": "block"
+                },
+                "sourceMarker": {
+                  "name": ""
+                },
+                "strokeDasharray": null
+              }
+            },
+            "width": 200,
+            "height": 100,
+            "zIndex": 10,
+            "connector": "smooth",
+            "data": {
+              "type": "tm.Flow",
+              "name": "JSON over vsock",
+              "description": "",
+              "outOfScope": false,
+              "isTrustBoundary": false,
+              "reasonOutOfScope": "",
+              "hasOpenThreats": false,
+              "isBidirectional": false,
+              "isEncrypted": false,
+              "isPublicNetwork": false,
+              "protocol": "",
+              "threats": [],
+              "trustBoundaryIds": []
+            },
+            "labels": [
+              "JSON over vsock"
+            ],
+            "id": "a3973a81-c2b5-4204-abb5-b258babdd2a4",
+            "source": {
+              "cell": "11bae4cb-a0f7-46bb-b265-28a01aaf0af8",
+              "port": "3454deea-01e4-4c99-8c72-d463ac7c3386"
+            },
+            "target": {
+              "cell": "69461bf9-e3ee-4ad2-b8bb-eb39dd8a4608",
+              "port": "9d151058-3c8d-46fc-95f2-c009f7643f34"
+            },
+            "vertices": []
           },
           {
             "position": {
@@ -2244,13 +2325,6 @@
               "hasOpenThreats": false,
               "providesAuthentication": false,
               "threats": []
-            },
-            "tools": {
-              "items": [
-                "boundary",
-                "button-remove"
-              ],
-              "name": null
             }
           }
         ]
