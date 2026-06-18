@@ -1,0 +1,26 @@
+{
+  "version": "2.6.2",
+  "summary": {
+    "title": "Oblak - model pretnji 2",
+    "owner": "UrosDjosic",
+    "description": "u carstvu svome pomeni nas Gospode kada dodjes u carstvo svoje\nblazeni siromasni duhom jer je njihovo carstvo nebesko\nblazeni koji placu jer ce se utesiti\nblazeni krotki jer ce naslediti zemlju\nblazeni gladni i zedni pravde jer ce se nasititi\nblazeni milostivi jako tiji pomilovani budut\nblazeni cisti serdcem jako tiji Boga uzrjat\nblazeni mirotvorci jako tiji sinove Bozji narekutsja\nblazeni izgnani pravdi radi jako tjeh jest carstvo nebesnoje\nblazeni jeste jegda ponosjat vam i izzenut i rekut vsak zol glagol na vi lazusce mene radi\nradujtesja i veselitesja jako mazda vasa mnoga na nebesjeh\nslava Otcu i Sinu i Svjatomu Duhu i ninje i prisno i vo vjek i vjekov amin",
+    "id": 0
+  },
+  "detail": {
+    "contributors": [],
+    "diagrams": [
+      {
+        "id": 0,
+        "title": "nivo 1",
+        "diagramType": "STRIDE",
+        "placeholder": "New STRIDE diagram description",
+        "thumbnail": "./public/content/images/thumbnail.stride.jpg",
+        "version": "2.6.2",
+        "cells": []
+      }
+    ],
+    "diagramTop": 1,
+    "reviewer": "",
+    "threatTop": 0
+  }
+}
