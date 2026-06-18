@@ -605,7 +605,12 @@
               "cell": "bc4d497f-68cd-4888-a9eb-9b913e9f10c7",
               "port": "9d151058-3c8d-46fc-95f2-c009f7643f34"
             },
-            "vertices": []
+            "vertices": [
+              {
+                "x": 636,
+                "y": 190
+              }
+            ]
           },
           {
             "shape": "flow",
@@ -757,6 +762,53 @@
                 "y": 250
               }
             ]
+          },
+          {
+            "shape": "flow",
+            "attrs": {
+              "line": {
+                "stroke": "#333333",
+                "targetMarker": {
+                  "name": "block"
+                },
+                "sourceMarker": {
+                  "name": ""
+                },
+                "strokeDasharray": null
+              }
+            },
+            "width": 200,
+            "height": 100,
+            "zIndex": 10,
+            "connector": "smooth",
+            "data": {
+              "type": "tm.Flow",
+              "name": "",
+              "description": "",
+              "outOfScope": false,
+              "isTrustBoundary": false,
+              "reasonOutOfScope": "",
+              "hasOpenThreats": false,
+              "isBidirectional": false,
+              "isEncrypted": false,
+              "isPublicNetwork": false,
+              "protocol": "",
+              "threats": [],
+              "trustBoundaryIds": []
+            },
+            "labels": [
+              ""
+            ],
+            "id": "75432c44-e115-4ca9-89d1-99a09e466fba",
+            "source": {
+              "cell": "3802df20-55aa-47dd-a10e-369ea67a7248",
+              "port": "3454deea-01e4-4c99-8c72-d463ac7c3386"
+            },
+            "target": {
+              "cell": "2b07a836-cdb4-4529-9951-252c36274cf6",
+              "port": "9d151058-3c8d-46fc-95f2-c009f7643f34"
+            },
+            "vertices": []
           },
           {
             "position": {
@@ -1138,6 +1190,11 @@
             },
             "tools": {
               "items": [
+                "boundary",
+                "button-remove",
+                "vertices",
+                "source-arrowhead",
+                "target-arrowhead",
                 "boundary",
                 "button-remove",
                 "vertices",
