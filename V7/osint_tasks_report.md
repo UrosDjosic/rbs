@@ -35,3 +35,31 @@ U commitu `fix: userSchema.js fix` pronašao sam obrisan fajl `.env` koji je sad
 https://github.com/hoshimaseok/SomethingFishy/commit/5d3ea213285ba9afab22b6f8f3a3faddabbd1cae
 
 ![Obrisan .env fajl sa flagom](./osint_images/task3image2.png)
+
+## 5. Educational Purposes Only - Uros Djosic SV20/2022
+
+**Zadatak:** Otvori zakljucanu .rar datoteku metodom hintova zaboravljene lozinke i pronadji flag unutra
+
+**Odgovor:** `UNS{V3RY_OLD_4RCH1V3}`
+
+Jednostavno sam uzeo sve hintove date u forgotten_password.txt fajlu i ranovao njihove hash odgovore kroz reverse hasher (kako je MD5 dvosmerni algoritam, sto nikako nije bezbedno za lozinke)
+
+![Primer reverse hashovanja](./osint_images/reverse.png)
+
+Spojivsi sve hashove, dosli smo do korektne sifre .rar datoteke
+
+![Nadvojvoda Jorvek Udunjanin](./osint_images/winrar.png)
+
+Sadrzaj datoteke je sama zastava!
+
+![zastava1](./osint_images/flag.png)
+
+## 6. Pixel Perfect - Uros Djosic SV20/2022
+
+**Zadatak:** Analiziraj sliku svog (bez i najmanje sumnje) autisticnog prijatelja zarad hintova o njegovoj lokaciji
+
+**Odgovor:** `UNS{PMF_5TUD3NT5_LOV3_M4TH}`
+
+Posto se u metapodacima slike nije nalazilo resenje, shvatio sam da je ono verovatno ugravirano u same piksele (mislim, zadatak se bukvalno tako i zove lol), tako da sam nasao neku online alatku za separaciju piksel ravni i malo se poigrao dok odgovor nije vrlo jasno postavo vidljiv
+
+![jesmo li mrtvoguzi](./osint_images/brother.png)
